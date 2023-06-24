@@ -2,6 +2,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 class VehicleEnv(object):
     def __init__(self) -> None:
         self.x = None
@@ -57,16 +58,16 @@ class VehicleEnv(object):
         self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         self.y_dot_next = (
             self.m * self.x_dot * self.y_dot
-            +  self.K * self.omega * self.delta_t
-            -  self.m * self.x_dot**2 * self.omega * self.delta_t
+            + self.K * self.omega * self.delta_t
+            - self.m * self.x_dot**2 * self.omega * self.delta_t
             - self.c_f * self.x_dot * action[1] * self.delta_t
-        ) / ( self.m * self.x_dot - self.D * self.delta_t)
+        ) / (self.m * self.x_dot - self.D * self.delta_t)
         self.phi_next = self.phi + self.delta_t * self.omega
         self.omega_next = (
             self.I_zz * self.x_dot * self.omega
-            +  self.K * self.y_dot * self.delta_t
-            -  self.x_dot * self.a_v * self.c_f * action[1] * self.delta_t
-        ) / ( self.I_zz * self.x_dot - self.W * self.delta_t)
+            + self.K * self.y_dot * self.delta_t
+            - self.x_dot * self.a_v * self.c_f * action[1] * self.delta_t
+        ) / (self.I_zz * self.x_dot - self.W * self.delta_t)
 
         # update state and relate info
         self.x = self.x_next
@@ -98,7 +99,7 @@ if __name__ == "__main__":
         obs_lists.append(obs)
         if i == 0:
             action = [1, 0]
-        elif i==500:
+        elif i == 500:
             action = [0, 0.1]
         else:
             action = [0, 0]
