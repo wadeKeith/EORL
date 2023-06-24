@@ -1,6 +1,6 @@
 import math
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 class VehicleEnv(object):
     def __init__(self) -> None:
@@ -20,7 +20,7 @@ class VehicleEnv(object):
         self.omega_next = None  # 下一时刻角速度
 
         self.x_ddot = None
-        self.delta_t = 1  # simulate time step
+        self.delta_t = 0.05  # simulate time step
 
         # parameters for vehicle
         self.m = 2500
@@ -54,21 +54,19 @@ class VehicleEnv(object):
         assert isinstance(action, list), "action must be a list"
         self.x_next = self.x + self.delta_t * (self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi))
         self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
-        self.x_dot_next = self.x_dot + self.delta_t * (action[0] - self.y_dot * self.omega)
+        self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         self.y_dot_next = (
-            2 * self.m * self.x_dot * self.y_dot
-            + self.D * self.delta_t * self.y_dot
-            + 2 * self.K * self.omega * self.delta_t
-            - 2 * self.m * self.x_dot**2 * self.omega * self.delta_t
-            - 2 * self.c_f * self.x_dot * action[1] * self.delta_t
-        ) / (2 * self.m * self.x_dot - self.D * self.delta_t)
+            self.m * self.x_dot * self.y_dot
+            +  self.K * self.omega * self.delta_t
+            -  self.m * self.x_dot**2 * self.omega * self.delta_t
+            - self.c_f * self.x_dot * action[1] * self.delta_t
+        ) / ( self.m * self.x_dot - self.D * self.delta_t)
         self.phi_next = self.phi + self.delta_t * self.omega
         self.omega_next = (
-            2 * self.I_zz * self.x_dot * self.omega
-            + self.W * self.delta_t * self.omega
-            + 2 * self.K * self.y_dot * self.delta_t
-            - 2 * self.x_dot * self.a_v * self.c_f * action[1] * self.delta_t
-        ) / (2 * self.I_zz * self.x_dot - self.W * self.delta_t)
+            self.I_zz * self.x_dot * self.omega
+            +  self.K * self.y_dot * self.delta_t
+            -  self.x_dot * self.a_v * self.c_f * action[1] * self.delta_t
+        ) / ( self.I_zz * self.x_dot - self.W * self.delta_t)
 
         # update state and relate info
         self.x = self.x_next
@@ -100,6 +98,8 @@ if __name__ == "__main__":
         obs_lists.append(obs)
         if i == 0:
             action = [1, 0]
+        elif i==500:
+            action = [0, 0.1]
         else:
             action = [0, 0]
         next_obs, reward, done, info = env.step(action)
@@ -114,10 +114,23 @@ if __name__ == "__main__":
 
     from utils import plot_list
 
-    plot_list(x_plot, "x_plot")
-    plot_list(y_plot, "y_plot")
-    plot_list(x_dot_plot, "x_dot_plot")
-    plot_list(y_dot_plot, "y_dot_plot")
-    plot_list(phi_plot, "phi_plot")
-    plot_list(omega_plot, "omega_plot")
+    plt.subplot(2, 3, 1)
+    plt.plot(x_plot)
+    plt.title("x_plot")
+    plt.subplot(2, 3, 2)
+    plt.plot(y_plot)
+    plt.title("y_plot")
+    plt.subplot(2, 3, 3)
+    plt.plot(x_dot_plot)
+    plt.title("x_dot_plot")
+    plt.subplot(2, 3, 4)
+    plt.plot(y_dot_plot)
+    plt.title("y_dot_plot")
+    plt.subplot(2, 3, 5)
+    plt.plot(phi_plot)
+    plt.title("phi_plot")
+    plt.subplot(2, 3, 6)
+    plt.plot(omega_plot)
+    plt.title("omega_plot")
+    plt.show()
     print("")
