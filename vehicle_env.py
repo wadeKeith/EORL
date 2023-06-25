@@ -13,7 +13,6 @@ class VehicleEnv(object):
         self.y_dot = None
         self.phi = None  # 角度
         self.omega = None  # 角速度
-        self.theta = None  # 路面坡度
         self.force = None  # driving force
         self.soc = None  # state of charge
 
@@ -24,7 +23,6 @@ class VehicleEnv(object):
         self.y_dot_next = None
         self.phi_next = None  # 下一时刻角度
         self.omega_next = None  # 下一时刻角速度
-        self.theta_next = None  # 下一时刻路面坡度
         self.force_next = None  # 下一时刻驱动力
         self.soc_next = None  # 下一时刻电池电量
 
@@ -32,7 +30,7 @@ class VehicleEnv(object):
         self.delta_t = 0.05  # simulate time step
 
         # parameters for vehicle
-        self.m = 1600
+        self.m = 1400
         self.c_f = -4e5
         self.c_r = -1.6e6
         self.D = self.c_f + self.c_r
@@ -47,8 +45,8 @@ class VehicleEnv(object):
         self.rho_a = 1.223
         self.A_f = 2.0
         self.r_w = 0.25
-        self.motor_eff_speed = np.array([0, 500, 1000, 1500, 2000])
-        self.motor_eff_torque = np.linspace(-450, 450, 21)
+        self.motor_eff_speed = np.array([0, 1000, 2000, 3000, 4000])
+        self.motor_eff_torque = np.linspace(-1200, 1200, 21)
         self.motor_eff_eff = (
             np.array(
                 [
@@ -85,7 +83,7 @@ class VehicleEnv(object):
         self.bat_eff_cha = np.array([0.9, 0.7])
         self.battery_eff_dis_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_dis)
         self.battery_eff_cha_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_cha)
-        self.bat_q = 1.4 * 1000 * 3600  # 电池容量 1.4kwh
+        self.bat_q = 25 * 1000 * 3600  # 电池容量 1.4kwh
 
     def reset(self):
         self.x = 0
@@ -94,7 +92,6 @@ class VehicleEnv(object):
         self.y_dot = 0
         self.phi = 0  # 角度
         self.omega = 0  # 角速度
-        self.theta = 0  # 路面坡度
         self.soc = 0.6  # state of charge
 
         # next time step
@@ -104,7 +101,6 @@ class VehicleEnv(object):
         self.y_dot_next = 0
         self.phi_next = 0  # 角度
         self.omega_next = 0  # 角速度
-        self.theta_next = 0  # 路面坡度
         self.soc_next = 0.6  # state of charge
         return np.array(
             [
@@ -114,12 +110,11 @@ class VehicleEnv(object):
                 self.y_dot_next,
                 self.phi_next,
                 self.omega_next,
-                self.theta_next,
                 self.soc_next,
             ]
         )
 
-    def step(self, action):
+    def step(self, action,theta):
         assert isinstance(action, list), "action must be a list"
         self.x_next = self.x + self.delta_t * (self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi))
         self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
@@ -136,11 +131,10 @@ class VehicleEnv(object):
             + self.K * self.y_dot * self.delta_t
             - self.x_dot * self.a_v * self.c_f * action[1] * self.delta_t
         ) / (self.I_zz * self.x_dot - self.W * self.delta_t)
-        self.theta_next = 0
         self.force = (
             action[0] * self.m
-            + self.m * self.g * self.tau_r * math.cos(self.theta)
-            + self.m * self.g * math.sin(self.theta)
+            + self.m * self.g * self.tau_r * math.cos(theta)
+            + self.m * self.g * math.sin(theta)
             + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
         )
         pb = pb_cal(
@@ -170,7 +164,6 @@ class VehicleEnv(object):
         self.phi = self.phi_next
         self.omega = self.omega_next
         self.soc = self.soc_next
-        self.theta = self.theta_next
 
         # Return State, Reward, Done, Info
         return_state = np.array(
@@ -181,7 +174,6 @@ class VehicleEnv(object):
                 self.y_dot_next,
                 self.phi_next,
                 self.omega_next,
-                self.theta_next,
                 self.soc_next,
             ]
         )

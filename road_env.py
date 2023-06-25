@@ -20,7 +20,7 @@ class RoadEnv(object):
 
     def reset(self):
         self.road_curvature = 0
-        self.road_gradient = self.road_gradient_cal([0, 0])
+        self.road_gradient = self.road_gradient_cal([0, 0])[0]
         return self.road_curvature, self.road_gradient
     def step(self, x, y):
         self.road_curvature_next = 0
