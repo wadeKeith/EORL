@@ -85,7 +85,7 @@ class VehicleEnv(object):
         self.battery_eff_cha_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_cha)
         self.bat_q = 25 * 1000 * 3600  # 电池容量 1.4kwh
 
-    def reset(self):
+    def reset(self,theta):
         self.x = 0
         self.y = 0
         self.x_dot = 0
@@ -93,6 +93,14 @@ class VehicleEnv(object):
         self.phi = 0  # 角度
         self.omega = 0  # 角速度
         self.soc = 0.6  # state of charge
+        self.force = (
+                0 * self.m
+                + self.m * self.g * self.tau_r * math.cos(theta)
+                + self.m * self.g * math.sin(theta)
+                + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot ** 2
+        )
+
+
 
         # next time step
         self.x_next = 0
@@ -111,6 +119,7 @@ class VehicleEnv(object):
                 self.phi_next,
                 self.omega_next,
                 self.soc_next,
+                self.force
             ]
         )
 
@@ -175,6 +184,7 @@ class VehicleEnv(object):
                 self.phi_next,
                 self.omega_next,
                 self.soc_next,
+                self.force
             ]
         )
         reward = pb * self.delta_t

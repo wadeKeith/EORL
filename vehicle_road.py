@@ -6,7 +6,7 @@ import math
 env = VehicleEnv()
 road_env = RoadEnv()
 obs_road = road_env.reset()
-obs = env.reset()
+obs = env.reset(obs_road[1])
 done = False
 
 obs_lists = []
@@ -32,32 +32,41 @@ x_dot_plot = [obs[2] for obs in obs_lists]
 y_dot_plot = [obs[3] for obs in obs_lists]
 phi_plot = [obs[4] for obs in obs_lists]
 omega_plot = [obs[5] for obs in obs_lists]
+soc_plot = [obs[6] for obs in obs_lists]
+force_plot = [obs[7] for obs in obs_lists]
 theta_plot = [theta for theta in obs_road_lists]
 from utils import plot_list
 plt.figure(1)
-plt.subplot(2, 4, 1)
+plt.subplot(2, 5, 1)
 plt.plot(x_plot)
 plt.title("x_plot")
-plt.subplot(2, 4, 2)
+plt.subplot(2, 5, 2)
 plt.plot(y_plot)
 plt.title("y_plot")
-plt.subplot(2, 4, 3)
+plt.subplot(2, 5, 3)
 plt.plot(x_dot_plot)
 plt.title("x_dot_plot")
-plt.subplot(2, 4, 4)
+plt.subplot(2, 5, 4)
 plt.plot(y_dot_plot)
 plt.title("y_dot_plot")
-plt.subplot(2, 4, 5)
+plt.subplot(2, 5, 5)
 plt.plot(phi_plot)
 plt.title("phi_plot")
-plt.subplot(2, 4, 6)
+plt.subplot(2, 5, 6)
 plt.plot(omega_plot)
 plt.title("omega_plot")
-plt.subplot(2,4,7)
+plt.subplot(2,5,7)
 plt.plot(x_plot,y_plot)
 plt.title("x_plot,y_plot")
-plt.subplot(2,4,8)
+plt.subplot(2,5,8)
 plt.plot(theta_plot)
+plt.title("theta_plot")
+plt.subplot(2,5,9)
+plt.plot(soc_plot)
+plt.title("soc_plot")
+plt.subplot(2,5,10)
+plt.plot(force_plot)
+plt.title("force_plot")
 plt.show()
 print("")
 
