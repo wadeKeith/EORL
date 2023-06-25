@@ -85,7 +85,6 @@ class VehicleEnv(object):
         self.bat_eff_cha = np.array([0.9, 0.7])
         self.battery_eff_dis_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_dis)
         self.battery_eff_cha_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_cha)
-        print(self.battery_eff_cha_1d([0.1, 0.9]))
         self.bat_q = 1.4 * 1000 * 3600  # 电池容量 1.4kwh
 
     def reset(self):
@@ -202,12 +201,12 @@ if __name__ == "__main__":
     reward_lists = []
     for i in range(10000):
         obs_lists.append(obs)
-        if i == 0:
-            action = [0, 0]
+        if i <= 10:
+            action = [1, math.pi/4]
         # elif 400<=i < 500:
         #     action = [0, 1]
         else:
-            action = [0, 0]
+            action = [-0.001, 0]
         next_obs, reward, done, info = env.step(action)
         obs = next_obs
         reward_lists.append(reward)
@@ -220,7 +219,7 @@ if __name__ == "__main__":
     omega_plot = [obs[5] for obs in obs_lists]
 
     from utils import plot_list
-
+    plt.figure(1)
     plt.subplot(2, 3, 1)
     plt.plot(x_plot)
     plt.title("x_plot")
@@ -241,3 +240,7 @@ if __name__ == "__main__":
     plt.title("omega_plot")
     plt.show()
     print("")
+    plt.figure(2)
+    plt.plot(x_plot,y_plot)
+    plt.title("x_plot,y_plot")
+    plt.show()
