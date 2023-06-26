@@ -1,24 +1,22 @@
-import math
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
 from matplotlib.patches import Polygon
-from matplotlib.transforms import Affine2D
+from vehicle_env import VehicleEnv
 from road_curvature_gradient_build import road_curvature_gradient_build
 
 
-def rota_rect(box, theta, x, y):
+def rota_rect(box, phi, x, y):
     """
     :param box: 正矩形的四个顶点
-    :param theta: 旋转角度
+    :param phi: 旋转角度
     :param x: 旋转中心(x,y)
     :param y: 旋转中心(x,y)
     :return: 旋转矩形的四个顶点坐标
     """
     # 旋转矩形
     box_matrix = np.array(box) - np.repeat(np.array([[x, y]]), len(box), 0)
-    theta = -theta / 180.0 * np.pi
-    rota_matrix = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], np.float32)
+    phi = -phi / 180.0 * np.pi
+    rota_matrix = np.array([[np.cos(phi), -np.sin(phi)], [np.sin(phi), np.cos(phi)]], np.float32)
 
     new_box = box_matrix.dot(rota_matrix) + np.repeat(np.array([[x, y]]), len(box), 0)
     return new_box
@@ -28,30 +26,41 @@ class RoadEnv(object):
     def __init__(self) -> None:
         self.road_curvature = None
         self.road_gradient = None
-        # next time step
-        self.road_curvature_next = None
-        self.road_gradient_next = None
 
         # parameters for road
         self.road_width = 3.75
         self.road_length = 1000
         self.road_num = 3
-        self.road_gradient_cal = road_curvature_gradient_build(self.road_length, self.road_width, self.road_num)
+        self.road_gradient_fun = road_curvature_gradient_build(self.road_length, self.road_width, self.road_num)
+
+        self.vehicle = VehicleEnv()
+        self.vehicle_obs = None  # vehicle observation
 
     def reset(self):
-        self.road_curvature = 0
-        self.road_gradient = self.road_gradient_cal([0, 0])[0]
-        return self.road_curvature, self.road_gradient
+        self.road_curvature = 0  # 曲率
+        self.road_gradient = self.road_gradient_fun([0, 0])[0]
+        # update theta
+        self.vehicle.update_theta(self.road_gradient)
+        self.vehicle_obs = self.vehicle.reset()
+        return self.vehicle_obs
 
-    def step(self, x, y):
-        self.road_curvature_next = 0
-        self.road_gradient_next = self.road_gradient_cal([x, y])[0]
-        return self.road_curvature_next, self.road_gradient_next
+    def step(self, action):
+        assert isinstance(action, list), "action must be a list"
+
+        # update road gradient
+        self.road_gradient = self.road_gradient_fun([self.vehicle_obs["x"], self.vehicle_obs["y"]])[0]
+
+        # update theta
+        self.vehicle.update_theta(self.road_gradient)
+        next_vehicle_obs, reward, done, info = self.vehicle.step(action)
+        self.vehicle_obs = next_vehicle_obs
+        return next_vehicle_obs, reward, done, info
 
     def render(self):
         pass
 
-    def plot_road(self):
+    def plot_road(self, obs):
+        plt.cla()
         # 定义道路总长和车道数量
         road_length = 1000
         num_lanes = 3
@@ -68,9 +77,9 @@ class RoadEnv(object):
         # 小车参数
         car_length = 2
         car_width = 1
-        car_x = 500  # 小车的x轴位置
-        car_y = 4  # 小车的y轴位置
-        car_angle = 30  # 小车与x轴的夹角
+        car_x = self.vehicle_obs["x"]  # 小车的x轴位置
+        car_y = self.vehicle_obs["y"]  # 小车的y轴位置
+        car_angle = self.vehicle_obs["phi"]  # 小车与x轴的夹角
 
         # 基于小车位置和旋转角度计算小车的四个点坐标
         car_box = [
@@ -87,12 +96,29 @@ class RoadEnv(object):
 
         # 将小车形状添加到图形中
         plt.gca().add_patch(rectangle)
-        plt.xlim(490, 510)
-        plt.show()
+        plt.pause(0.1)
 
 
 if __name__ == "__main__":
     road_env = RoadEnv()
-    road_env.reset()
-    print(road_env.step(500, 4))
-    road_env.plot_road()
+
+    obs = road_env.reset()
+    done = False
+
+    obs_lists = []
+    reward_lists = []
+    for i in range(10000):
+        obs_lists.append(obs)
+        if i <= 10:
+            import math
+
+            action = [1, math.pi / 4]
+        # elif 400<=i < 500:
+        #     action = [0, 1]
+        else:
+            action = [0.5, 0]
+        next_obs, reward, done, info = road_env.step(action)
+        obs = next_obs
+        reward_lists.append(reward)
+
+        road_env.plot_road(obs)

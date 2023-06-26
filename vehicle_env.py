@@ -85,7 +85,12 @@ class VehicleEnv(object):
         self.battery_eff_cha_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_cha)
         self.bat_q = 25 * 1000 * 3600  # 电池容量 1.4kwh
 
-    def reset(self,theta):
+        self.theta = 0
+
+    def update_theta(self, theta):
+        self.theta = theta
+
+    def reset(self):
         self.x = 0
         self.y = 0
         self.x_dot = 0
@@ -94,13 +99,11 @@ class VehicleEnv(object):
         self.omega = 0  # 角速度
         self.soc = 0.6  # state of charge
         self.force = (
-                0 * self.m
-                + self.m * self.g * self.tau_r * math.cos(theta)
-                + self.m * self.g * math.sin(theta)
-                + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot ** 2
+            0 * self.m
+            + self.m * self.g * self.tau_r * math.cos(self.theta)
+            + self.m * self.g * math.sin(self.theta)
+            + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
         )
-
-
 
         # next time step
         self.x_next = 0
@@ -110,20 +113,19 @@ class VehicleEnv(object):
         self.phi_next = 0  # 角度
         self.omega_next = 0  # 角速度
         self.soc_next = 0.6  # state of charge
-        return np.array(
-            [
-                self.x_next,
-                self.y_next,
-                self.x_dot_next,
-                self.y_dot_next,
-                self.phi_next,
-                self.omega_next,
-                self.soc_next,
-                self.force
-            ]
-        )
 
-    def step(self, action,theta):
+        return {
+            "x": self.x_next,
+            "y": self.y_next,
+            "x_dot": self.x_dot_next,
+            "y_dot": self.y_dot_next,
+            "phi": self.phi_next,
+            "omega": self.omega_next,
+            "soc": self.soc_next,
+            "force": self.force,
+        }
+
+    def step(self, action):
         assert isinstance(action, list), "action must be a list"
         self.x_next = self.x + self.delta_t * (self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi))
         self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
@@ -142,8 +144,8 @@ class VehicleEnv(object):
         ) / (self.I_zz * self.x_dot - self.W * self.delta_t)
         self.force = (
             action[0] * self.m
-            + self.m * self.g * self.tau_r * math.cos(theta)
-            + self.m * self.g * math.sin(theta)
+            + self.m * self.g * self.tau_r * math.cos(self.theta)
+            + self.m * self.g * math.sin(self.theta)
             + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
         )
         pb = pb_cal(
@@ -175,18 +177,17 @@ class VehicleEnv(object):
         self.soc = self.soc_next
 
         # Return State, Reward, Done, Info
-        return_state = np.array(
-            [
-                self.x_next,
-                self.y_next,
-                self.x_dot_next,
-                self.y_dot_next,
-                self.phi_next,
-                self.omega_next,
-                self.soc_next,
-                self.force
-            ]
-        )
+        return_state = {
+            "x": self.x_next,
+            "y": self.y_next,
+            "x_dot": self.x_dot_next,
+            "y_dot": self.y_dot_next,
+            "phi": self.phi_next,
+            "omega": self.omega_next,
+            "soc": self.soc_next,
+            "force": self.force,
+        }
+
         reward = pb * self.delta_t
         done = False
         info = {}
@@ -204,7 +205,7 @@ if __name__ == "__main__":
     for i in range(10000):
         obs_lists.append(obs)
         if i <= 10:
-            action = [1, math.pi/4]
+            action = [1, math.pi / 4]
         # elif 400<=i < 500:
         #     action = [0, 1]
         else:
@@ -213,14 +214,15 @@ if __name__ == "__main__":
         obs = next_obs
         reward_lists.append(reward)
     Reward = sum(reward_lists)
-    x_plot = [obs[0] for obs in obs_lists]
-    y_plot = [obs[1] for obs in obs_lists]
-    x_dot_plot = [obs[2] for obs in obs_lists]
-    y_dot_plot = [obs[3] for obs in obs_lists]
-    phi_plot = [obs[4] for obs in obs_lists]
-    omega_plot = [obs[5] for obs in obs_lists]
+    x_plot = [obs["x"] for obs in obs_lists]
+    y_plot = [obs["y"] for obs in obs_lists]
+    x_dot_plot = [obs["x_dot"] for obs in obs_lists]
+    y_dot_plot = [obs["y_dot"] for obs in obs_lists]
+    phi_plot = [obs["phi"] for obs in obs_lists]
+    omega_plot = [obs["omega"] for obs in obs_lists]
 
     from utils import plot_list
+
     plt.figure(1)
     plt.subplot(2, 3, 1)
     plt.plot(x_plot)
@@ -243,6 +245,6 @@ if __name__ == "__main__":
     plt.show()
     print("")
     plt.figure(2)
-    plt.plot(x_plot,y_plot)
+    plt.plot(x_plot, y_plot)
     plt.title("x_plot,y_plot")
     plt.show()
