@@ -83,7 +83,7 @@ class VehicleEnv(object):
         self.bat_eff_cha = np.array([0.9, 0.7])
         self.battery_eff_dis_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_dis)
         self.battery_eff_cha_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_cha)
-        self.bat_q = 25 * 1000 * 3600  # 电池容量 1.4kwh
+        self.bat_q = 25 * 1000 * 3600  # 电池容量 25kwh
 
         self.theta = 0
 
@@ -127,9 +127,16 @@ class VehicleEnv(object):
 
     def step(self, action):
         assert isinstance(action, list), "action must be a list"
+
+        # Limit Action
+        if self.x_dot > 50:
+            action[0] = min(action[0], 0)
+
+        # Syetem Dynamics
         self.x_next = self.x + self.delta_t * (self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi))
         self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
         self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
+
         self.y_dot_next = (
             self.m * self.x_dot * self.y_dot
             + self.K * self.omega * self.delta_t
