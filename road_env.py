@@ -38,9 +38,13 @@ class RoadEnv(object):
         self.vehicle = VehicleEnv()
         self.vehicle_obs = None  # vehicle observation
 
+        self.surrounding_vehicles = {
+            "1": {"x": 0, "y": 0, "phi": 0, "v": 0},
+        }  # surrounding vehicles
+
     def reset(self):
         self.road_curvature = 0  # 曲率
-        self.road_gradient = self.road_gradient_fun([5, 3.75*3/2])[0]
+        self.road_gradient = self.road_gradient_fun([5, 3.75 * 3 / 2])[0]
         # update theta
         self.vehicle.update_theta(math.radians(self.road_gradient))
         self.vehicle_obs = self.vehicle.reset()
@@ -136,7 +140,7 @@ if __name__ == "__main__":
         # #     action = [0, 1]
         # else:
         #     action = [0.5, 0]
-        action = [0, np.random.uniform(-2,2)]
+        action = [0, np.random.uniform(-2, 2)]
         next_obs, reward, done, info = road_env.step(action)
         obs = next_obs
         reward_lists.append(reward)
