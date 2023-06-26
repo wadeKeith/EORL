@@ -116,6 +116,65 @@ def distant_min(polygon1, polygon2):
     )
     return min(distant)
 
+def rota_rect(box, phi, x, y):
+    """
+    :param box: 正矩形的四个顶点
+    :param phi: 旋转角度
+    :param x: 旋转中心(x,y)
+    :param y: 旋转中心(x,y)
+    :return: 旋转矩形的四个顶点坐标
+    """
+    # 旋转矩形
+    box_matrix = np.array(box) - np.repeat(np.array([[x, y]]), len(box), 0)
+    phi = -phi / 180.0 * np.pi
+    rota_matrix = np.array([[np.cos(phi), -np.sin(phi)], [np.sin(phi), np.cos(phi)]], np.float32)
+
+    new_box = box_matrix.dot(rota_matrix) + np.repeat(np.array([[x, y]]), len(box), 0)
+    return new_box
+def coordination(car_parmeters):
+    """
+    :param x: 车辆中心x坐标
+    :param y: 车辆中心y坐标
+    :param phi: 车辆角度
+    :param car_lenth: 车辆长度
+    :param car_width: 车辆宽度
+    :return: 车辆四个顶点坐标
+    """
+    x, y, phi, car_length, car_width =car_parmeters
+    car_box = [
+        [x - car_length / 2, y - car_width / 2],
+        [x + car_length / 2, y - car_width / 2],
+        [x + car_length / 2, y+ car_width / 2],
+        [x - car_length / 2, y + car_width / 2],
+    ]
+
+    car_box = rota_rect(car_box, phi, x, y)
+    return car_box
+
+
+def e_s_distance(ego_car_parmeters, surronding_car_parmeters):
+    '''
+
+    Args:
+        ego_car_parmeters: [x, y, phi, car_length, car_width]
+        surronding_car_parmeters: {1:{x, y, phi, car_length, car_width},       for surrounding vehicles
+                                   2:{x, y, phi, car_length, car_width},
+                                  ......}
+
+    Returns: minize distance between ego car and surrounding vehicles  [d1, d2, d3, d4, d5, d6, d7, d8]
+
+    '''
+    d_min = []
+    ego_car_box = coordination(ego_car_parmeters)
+    for key, value in surronding_car_parmeters.items():
+        surrounding_vehicle_parmeters = [value["x"], value["y"], value["phi"], value["car_length"], value["car_width"]]
+        surronding_car_box = coordination(surrounding_vehicle_parmeters)
+        d_min.append( distant_min(ego_car_box, surronding_car_box))
+    return d_min
+
+
+
+
 
 if __name__ == "__main__":
     # polygon1 = np.array([[1, 1], [4, 1], [4, 3], [1, 3]])

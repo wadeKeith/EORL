@@ -86,7 +86,8 @@ class VehicleEnv(object):
         self.bat_q = 25 * 1000 * 3600  # 电池容量 25kwh
 
         self.theta = None
-
+        self.car_length = 5
+        self.car_width = 3.75 / 3 * 2
     def update_theta(self, theta):
         self.theta = theta
 

@@ -7,23 +7,10 @@ from matplotlib.patches import Polygon
 
 from vehicle_env import VehicleEnv
 from road_curvature_gradient_build import road_curvature_gradient_build
+from utils import coordination,e_s_distance
 
 
-def rota_rect(box, phi, x, y):
-    """
-    :param box: 正矩形的四个顶点
-    :param phi: 旋转角度
-    :param x: 旋转中心(x,y)
-    :param y: 旋转中心(x,y)
-    :return: 旋转矩形的四个顶点坐标
-    """
-    # 旋转矩形
-    box_matrix = np.array(box) - np.repeat(np.array([[x, y]]), len(box), 0)
-    phi = -phi / 180.0 * np.pi
-    rota_matrix = np.array([[np.cos(phi), -np.sin(phi)], [np.sin(phi), np.cos(phi)]], np.float32)
 
-    new_box = box_matrix.dot(rota_matrix) + np.repeat(np.array([[x, y]]), len(box), 0)
-    return new_box
 
 
 class RoadEnv(object):
@@ -41,16 +28,28 @@ class RoadEnv(object):
         self.vehicle_obs = None  # vehicle observation
 
         self.surrounding_vehicles = {
-            "1": {"x": 0, "y": 0, "phi": 0, "v": 0},
-        }  # surrounding vehicles
+            "1": {"x": self.road_length/5, "y": self.road_width/2, "phi": 0, "v": 0,'car_length':5,'car_width':self.road_width/3*2},
+            "2": {"x": self.road_length/5*3, "y": self.road_width/2, "phi": 0, "v": 0,'car_length':5,'car_width':self.road_width/3*2},
+            "3": {"x": self.road_length/5*5, "y": self.road_width/2, "phi": 0, "v": 0,'car_length':5,'car_width':self.road_width/3*2},
+            "4": {"x": self.road_length/5*2, "y": self.road_width/2*3, "phi": 0, "v": 0,'car_length':5,'car_width':self.road_width/3*2},
+            "5": {"x": self.road_length/5*4, "y": self.road_width/2*3, "phi": 0, "v": 0,'car_length':5,'car_width':self.road_width/3*2},
+            "6": {"x": self.road_length / 4 , "y": self.road_width / 2*5, "phi": 0, "v": 0,'car_length':5,'car_width':self.road_width/3*2},
+            "7": {"x": self.road_length / 4*2, "y": self.road_width / 2*5, "phi": 0, "v": 0,'car_length':5,'car_width':self.road_width/3*2},
+            "8": {"x": self.road_length / 4*3, "y": self.road_width / 2*5, "phi": 0, "v": 0,'car_length':5,'car_width':self.road_width/3*2},
+            "9": {"x": self.road_length / 12 * 11, "y": self.road_width / 2*5, "phi": 0, "v": 0,'car_length':5,'car_width':self.road_width/3*2},
 
+        }  # surrounding vehicles
+        self.dmin =None
+        self.dmin_next = None
     def reset(self):
         self.road_curvature = 0  # 曲率
         self.road_gradient = self.road_gradient_fun([5, 3.75 * 3 / 2])[0]
         # update theta
         self.vehicle.update_theta(math.radians(self.road_gradient))
         self.vehicle_obs = self.vehicle.reset()
-        return self.vehicle_obs
+        self.dmin = e_s_distance([self.vehicle_obs["x"],self.vehicle_obs["y"],self.vehicle_obs["phi"],self.vehicle.car_length,self.vehicle.car_width]
+                                 , self.surrounding_vehicles)
+        return self.vehicle_obs,self.dmin
 
     def step(self, action):
         assert isinstance(action, list), "action must be a list"
@@ -62,78 +61,75 @@ class RoadEnv(object):
         self.vehicle.update_theta(math.radians(self.road_gradient))
         next_vehicle_obs, reward, done, info = self.vehicle.step(action)
         self.vehicle_obs = next_vehicle_obs
-        return next_vehicle_obs, reward, done, info
+        self.dmin_next = e_s_distance([self.vehicle_obs["x"], self.vehicle_obs["y"], self.vehicle_obs["phi"], self.vehicle.car_length, self.vehicle.car_width]
+                                    , self.surrounding_vehicles)
+        return [next_vehicle_obs,self.dmin_next], reward, done, info
 
     def render(self):
         pass
 
-    def plot_road(self, obs):
+    def plot_road(self):
         plt.cla()
-        # 定义道路总长和车道数量
-        road_length = 1000
-        num_lanes = 3
-        lane_width = 3.75
 
         # 绘制左右两边的黑色实线
-        view_road_len = 30
+        # view_road_len = 30
         plt.plot(
-            [self.vehicle_obs["x"] - view_road_len, self.vehicle_obs["x"] + view_road_len],
+            [0, self.road_length],
             [0, 0],
             color="black",
             linewidth=2,
         )
         plt.plot(
-            [self.vehicle_obs["x"] - view_road_len, self.vehicle_obs["x"] + view_road_len],
-            [num_lanes * lane_width, num_lanes * lane_width],
+            [0, self.road_length],
+            [self.road_num * self.road_width, self.road_num * self.road_width],
             color="black",
             linewidth=2,
         )
 
         # 绘制车道线
-        for i in range(1, num_lanes):
-            lane_y = i * lane_width
+        for i in range(1, self.road_num):
+            lane_y = i * self.road_width
             plt.plot(
-                [self.vehicle_obs["x"] - view_road_len, self.vehicle_obs["x"] + view_road_len],
+                [0, self.road_length],
                 [lane_y, lane_y],
                 linestyle="dashed",
                 color="black",
             )
 
         # 小车参数
-        car_length = 2
-        car_width = 1
-        car_x = self.vehicle_obs["x"]  # 小车的x轴位置
-        car_y = self.vehicle_obs["y"]  # 小车的y轴位置
-        car_angle = self.vehicle_obs["phi"]  # 小车与x轴的夹角
 
-        # 基于小车位置和旋转角度计算小车的四个点坐标
-        car_box = [
-            [car_x - car_length / 2, car_y - car_width / 2],
-            [car_x + car_length / 2, car_y - car_width / 2],
-            [car_x + car_length / 2, car_y + car_width / 2],
-            [car_x - car_length / 2, car_y + car_width / 2],
-        ]
 
-        car_box = rota_rect(car_box, car_angle, car_x, car_y)
+        ego_parmeters = [self.vehicle_obs["x"],self.vehicle_obs["y"],self.vehicle_obs["phi"],self.vehicle.car_length,self.vehicle.car_width ]
+        car_box = coordination(ego_parmeters)
+        rectangle_ego = Polygon(car_box, closed=True, edgecolor="red", linewidth=2, facecolor="none")
 
-        # 创建Polygon对象
-        rectangle = Polygon(car_box, closed=True, edgecolor="red", linewidth=2, facecolor="none")
+        for key, value in self.surrounding_vehicles.items():
+            surrounding_vehicle_parmeters = [value["x"], value["y"], value["phi"], value["car_length"], value["car_width"]]
+            surrounding_vehicle_box = coordination(surrounding_vehicle_parmeters)
+
+            # 创建Polygon对象
+            rectangle = Polygon(surrounding_vehicle_box, closed=True, edgecolor="red", linewidth=2, facecolor="none")
+
+            # 将小车形状添加到图形中
+            plt.gca().add_patch(rectangle)
 
         # 将小车形状添加到图形中
-        plt.gca().add_patch(rectangle)
+        plt.gca().add_patch(rectangle_ego)
         plt.pause(0.1)
 
 
 if __name__ == "__main__":
     road_env = RoadEnv()
 
-    obs = road_env.reset()
+    obs,d_min = road_env.reset()
     done = False
 
     obs_lists = []
+    d_min_lists = []
     reward_lists = []
     for i in range(10000):
         obs_lists.append(obs)
+        d_min_lists.append(d_min)
         # if i <= 10:
         #     import math
         #
@@ -142,10 +138,12 @@ if __name__ == "__main__":
         # #     action = [0, 1]
         # else:
         #     action = [0.5, 0]
-        action = [0, np.random.uniform(-2, 2)]
-        next_obs, reward, done, info = road_env.step(action)
+        action = [0, 0]
+        [next_obs,d_min_next], reward, done, info = road_env.step(action)
         obs = next_obs
+        d_min = d_min_next
         reward_lists.append(reward)
 
-        road_env.plot_road(obs)
+        road_env.plot_road()
         # print(obs['force'])
+    print('')
