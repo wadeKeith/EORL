@@ -66,13 +66,29 @@ class RoadEnv(object):
         num_lanes = 3
 
         # 绘制左右两边的黑色实线
-        plt.plot([0, road_length], [0, 0], color="black", linewidth=2)
-        plt.plot([0, road_length], [num_lanes * 3, num_lanes * 3], color="black", linewidth=2)
+        view_road_len = 30
+        plt.plot(
+            [self.vehicle_obs["x"] - view_road_len, self.vehicle_obs["x"] + view_road_len],
+            [0, 0],
+            color="black",
+            linewidth=2,
+        )
+        plt.plot(
+            [self.vehicle_obs["x"] - view_road_len, self.vehicle_obs["x"] + view_road_len],
+            [num_lanes * 3, num_lanes * 3],
+            color="black",
+            linewidth=2,
+        )
 
         # 绘制车道线
         for i in range(1, num_lanes):
             lane_y = i * 3
-            plt.plot([0, road_length], [lane_y, lane_y], linestyle="dashed", color="black")
+            plt.plot(
+                [self.vehicle_obs["x"] - view_road_len, self.vehicle_obs["x"] + view_road_len],
+                [lane_y, lane_y],
+                linestyle="dashed",
+                color="black",
+            )
 
         # 小车参数
         car_length = 2
