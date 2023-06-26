@@ -85,15 +85,15 @@ class VehicleEnv(object):
         self.battery_eff_cha_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_cha)
         self.bat_q = 25 * 1000 * 3600  # 电池容量 25kwh
 
-        self.theta = 0
+        self.theta = None
 
     def update_theta(self, theta):
         self.theta = theta
 
     def reset(self):
-        self.x = 0
-        self.y = 0
-        self.x_dot = 0
+        self.x = 5
+        self.y = 3.75*3/2
+        self.x_dot = 30
         self.y_dot = 0
         self.phi = 0  # 角度
         self.omega = 0  # 角速度
@@ -128,13 +128,18 @@ class VehicleEnv(object):
     def step(self, action):
         assert isinstance(action, list), "action must be a list"
 
-        # Limit Action
+        # Limit Action 这里放入强化时去掉，变成软约束即可
         if self.x_dot > 50:
             action[0] = min(action[0], 0)
-
+        elif self.x_dot < 0:
+            action[0] = max(action[0], 0)
+        elif self.phi>math.radians(5):
+            action[1] = min(action[1], 0)
+        elif self.phi<math.radians(-5):
+            action[1] = max(action[1], 0)
         # Syetem Dynamics
-        self.x_next = self.x + self.delta_t * (self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi))
-        self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
+        self.x_next = self.x + self.delta_t * (self.x_dot * abs(math.cos(self.phi)) - self.y_dot * abs(math.sin(self.phi)))
+        self.y_next = self.y + self.delta_t * (self.x_dot * abs(math.sin(self.phi))+ self.y_dot * abs(math.cos(self.phi)))
         self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
 
         self.y_dot_next = (

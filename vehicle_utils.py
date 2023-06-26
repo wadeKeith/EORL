@@ -41,9 +41,9 @@ def pb_cal(motor_eff_2d, force, x_dot, soc, r_w, bat_eff_dis, bat_eff_cha):
         pb: power of battery
     """
     if force > 0:
-        total_eff = motor_eff_2d((force * r_w, x_dot * 60 / (2 * math.pi * r_w))) * bat_eff_dis([soc])
+        total_eff = motor_eff_2d((force * r_w, abs(x_dot) * 60 / (2 * math.pi * r_w))) * bat_eff_dis([soc])
         pb = force * x_dot / total_eff
     else:
-        total_eff = motor_eff_2d((force * r_w, x_dot * 60 / (2 * math.pi * r_w))) * bat_eff_cha([soc])
+        total_eff = motor_eff_2d((force * r_w, abs(x_dot) * 60 / (2 * math.pi * r_w))) * bat_eff_cha([soc])
         pb = force * x_dot * total_eff
     return pb

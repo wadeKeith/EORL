@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
@@ -38,9 +40,9 @@ class RoadEnv(object):
 
     def reset(self):
         self.road_curvature = 0  # 曲率
-        self.road_gradient = self.road_gradient_fun([0, 0])[0]
+        self.road_gradient = self.road_gradient_fun([5, 3.75*3/2])[0]
         # update theta
-        self.vehicle.update_theta(self.road_gradient)
+        self.vehicle.update_theta(math.radians(self.road_gradient))
         self.vehicle_obs = self.vehicle.reset()
         return self.vehicle_obs
 
@@ -51,7 +53,7 @@ class RoadEnv(object):
         self.road_gradient = self.road_gradient_fun([self.vehicle_obs["x"], self.vehicle_obs["y"]])[0]
 
         # update theta
-        self.vehicle.update_theta(self.road_gradient)
+        self.vehicle.update_theta(math.radians(self.road_gradient))
         next_vehicle_obs, reward, done, info = self.vehicle.step(action)
         self.vehicle_obs = next_vehicle_obs
         return next_vehicle_obs, reward, done, info
@@ -64,6 +66,7 @@ class RoadEnv(object):
         # 定义道路总长和车道数量
         road_length = 1000
         num_lanes = 3
+        lane_width = 3.75
 
         # 绘制左右两边的黑色实线
         view_road_len = 30
@@ -75,14 +78,14 @@ class RoadEnv(object):
         )
         plt.plot(
             [self.vehicle_obs["x"] - view_road_len, self.vehicle_obs["x"] + view_road_len],
-            [num_lanes * 3, num_lanes * 3],
+            [num_lanes * lane_width, num_lanes * lane_width],
             color="black",
             linewidth=2,
         )
 
         # 绘制车道线
         for i in range(1, num_lanes):
-            lane_y = i * 3
+            lane_y = i * lane_width
             plt.plot(
                 [self.vehicle_obs["x"] - view_road_len, self.vehicle_obs["x"] + view_road_len],
                 [lane_y, lane_y],
@@ -125,16 +128,18 @@ if __name__ == "__main__":
     reward_lists = []
     for i in range(10000):
         obs_lists.append(obs)
-        if i <= 10:
-            import math
-
-            action = [1, math.pi / 4]
-        # elif 400<=i < 500:
-        #     action = [0, 1]
-        else:
-            action = [0.5, 0]
+        # if i <= 10:
+        #     import math
+        #
+        #     action = [1, math.pi / 4]
+        # # elif 400<=i < 500:
+        # #     action = [0, 1]
+        # else:
+        #     action = [0.5, 0]
+        action = [0, np.random.uniform(-2,2)]
         next_obs, reward, done, info = road_env.step(action)
         obs = next_obs
         reward_lists.append(reward)
 
         road_env.plot_road(obs)
+        # print(obs['force'])
