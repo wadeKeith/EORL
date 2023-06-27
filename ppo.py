@@ -124,20 +124,15 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                     episode_return += reward
 
                 return_list.append(episode_return)
-                if len(transition_dict["states"]) >= 1024:
-                    print("episode_return: ", episode_return)
-                    agent.update(transition_dict)
-                    transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
-                    if (i_episode + 1) % 10 == 0:
-                        pbar.set_postfix(
-                            {
-                                "episode": "%d" % (num_episodes / 10 * i + i_episode + 1),
-                                "return": "%.3f" % np.mean(return_list[-10:]),
-                            }
-                        )
-                else:
-                    # print("episode: ", i_episode, "len: ", len(transition_dict["states"]))
-                    pass
+                agent.update(transition_dict)
+                transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
+                if (i_episode + 1) % 10 == 0:
+                    pbar.set_postfix(
+                        {
+                            "episode": "%d" % (num_episodes / 10 * i + i_episode + 1),
+                            "return": "%.3f" % np.mean(return_list[-10:]),
+                        }
+                    )
 
                 pbar.update(1)
     return return_list
