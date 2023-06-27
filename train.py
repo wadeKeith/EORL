@@ -26,8 +26,6 @@ agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lm
 if have_model:
     agent.actor.load_state_dict(torch.load("ppo_continuous_actor1.pth"))
 # train
-return_list = train_on_policy_agent(env, agent, num_episodes,render_flag)
+return_list = train_on_policy_agent(env, agent, num_episodes, render_flag)
 # save model
 torch.save(agent.actor.state_dict(), "ppo_continuous_actor.pth")
-
-

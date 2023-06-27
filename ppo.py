@@ -15,8 +15,8 @@ class PolicyNetContinuous(torch.nn.Module):
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
-        mu = 2.0 * torch.tanh(self.fc_mu(x))
-        std = F.softplus(self.fc_std(x))+1e-8
+        mu = torch.tanh(self.fc_mu(x))
+        std = F.softplus(self.fc_std(x)) + 1e-8
         return mu, std
 
 
@@ -60,7 +60,7 @@ class PPOContinuous:
         rewards = torch.tensor(transition_dict["rewards"], dtype=torch.float).view(-1, 1).to(self.device)
         next_states = torch.tensor(transition_dict["next_states"], dtype=torch.float).to(self.device)
         dones = torch.tensor(transition_dict["dones"], dtype=torch.float).view(-1, 1).to(self.device)
-        rewards = rewards # 和TRPO一样,对奖励进行修改,方便训练
+        rewards = rewards  # 和TRPO一样,对奖励进行修改,方便训练
         td_target = rewards + self.gamma * self.critic(next_states) * (1 - dones)
         td_delta = td_target - self.critic(states)
         advantage = compute_advantage(self.gamma, self.lmbda, td_delta.cpu()).to(self.device)
@@ -97,7 +97,7 @@ def compute_advantage(gamma, lmbda, td_delta):
     return torch.tensor(advantage_list, dtype=torch.float)
 
 
-def train_on_policy_agent(env, agent, num_episodes,render_flag):
+def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
     return_list = []
     transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
     for i in range(10):
@@ -105,7 +105,7 @@ def train_on_policy_agent(env, agent, num_episodes,render_flag):
             for i_episode in range(int(num_episodes / 10)):
                 episode_return = 0
 
-                state,done = env.reset()
+                state, done = env.reset()
 
                 while not done:
                     # print("state: ", state)
@@ -124,7 +124,7 @@ def train_on_policy_agent(env, agent, num_episodes,render_flag):
                     episode_return += reward
 
                 return_list.append(episode_return)
-                if len(transition_dict["states"]) >= 256:
+                if len(transition_dict["states"]) >= 1024:
                     print("episode_return: ", episode_return)
                     agent.update(transition_dict)
                     transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
@@ -146,12 +146,12 @@ def train_on_policy_agent(env, agent, num_episodes,render_flag):
 if __name__ == "__main__":
     env = AgentEnv()
 
-    actor_lr = 1e-5
-    critic_lr = 5e-3
+    actor_lr = 1e-4
+    critic_lr = 5e-4
     num_episodes = 2000
     hidden_dim = 128
-    gamma = 0.95
-    lmbda = 0.9
+    gamma = 0.999
+    lmbda = 0.95
     epochs = 10
     eps = 0.2
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -162,8 +162,7 @@ if __name__ == "__main__":
 
     if os.path.exists("ppo_continuous_actor.pth"):
         agent.actor.load_state_dict(torch.load("ppo_continuous_actor.pth"))
-    #train
+    # train
     return_list = train_on_policy_agent(env, agent, num_episodes)
-    #save model
+    # save model
     torch.save(agent.actor.state_dict(), "ppo_continuous_actor.pth")
-

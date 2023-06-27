@@ -6,7 +6,7 @@ from vehicle_utils import bat_dynamic, pb_cal
 
 
 class VehicleEnv(object):
-    def __init__(self,road_width,road_length,road_num,car_length):
+    def __init__(self, road_width, road_length, road_num, car_length):
         self.x = None
         self.y = None
         self.x_dot = None
@@ -98,7 +98,7 @@ class VehicleEnv(object):
     def update_theta(self, theta):
         self.theta = theta
 
-    def reset(self,x,y,x_dot,y_dot,phi,omega,soc):
+    def reset(self, x, y, x_dot, y_dot, phi, omega, soc):
         self.x = x
         self.y = y
         self.x_dot = x_dot
@@ -134,19 +134,19 @@ class VehicleEnv(object):
             "omega": self.omega,
             "soc": self.soc,
             "force": self.force,
-        },done
+        }, done
 
     def step(self, action):
         assert isinstance(action, list), "action must be a list"
         # Syetem Dynamics
         self.x_next = self.x + self.delta_t * (self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi))
-        self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi)+ self.y_dot * math.cos(self.phi))
-        if 0<self.x_next<1000 and 0<self.y_next<self.road_width*self.road_num:
+        self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
+        if 0 < self.x_next < 1000 and 0 < self.y_next < self.road_width * self.road_num:
             done_outofroad = False
         else:
             done_outofroad = True
         x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
-        if 0<=x_dot_next <= 50 :
+        if 0 <= x_dot_next <= 50:
             self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
             done_overacceration = False
         elif x_dot_next > 50:
@@ -173,7 +173,7 @@ class VehicleEnv(object):
             + self.m * self.g * math.sin(self.theta)
             + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
         )
-        if self.min_torque/self.r_w <= force <=self.max_torque/self.r_w:
+        if self.min_torque / self.r_w <= force <= self.max_torque / self.r_w:
             self.force = (
                 action[0] * self.m
                 + self.m * self.g * self.tau_r * math.cos(self.theta)
@@ -181,11 +181,11 @@ class VehicleEnv(object):
                 + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
             )
             done_motor_cant_provide = False
-        elif force < self.min_torque/self.r_w:
-            self.force = self.min_torque/self.r_w
+        elif force < self.min_torque / self.r_w:
+            self.force = self.min_torque / self.r_w
             done_motor_cant_provide = False
         else:
-            self.force = self.max_torque/self.r_w
+            self.force = self.max_torque / self.r_w
             done_motor_cant_provide = True
         try:
             pb = pb_cal(
@@ -198,14 +198,22 @@ class VehicleEnv(object):
                 self.battery_eff_cha_1d,
             )[0]
         except:
-            print('Motor cant offer the acceration or velocity or SOC ','Force:',self.force,'velocity:',self.x_dot,'SOC:',self.soc)
+            print(
+                "Motor cant offer the acceration or velocity or SOC ",
+                "Force:",
+                self.force,
+                "velocity:",
+                self.x_dot,
+                "SOC:",
+                self.soc,
+            )
 
         self.soc_next = bat_dynamic(
             self.motor_eff_2d,
             self.r_w,
             self.soc,
             self.force,
-            self.x_dot ,
+            self.x_dot,
             self.battery_eff_dis_1d,
             self.battery_eff_cha_1d,
             self.delta_t,
@@ -237,11 +245,14 @@ class VehicleEnv(object):
             done = True
             info = {}
         else:
-            reward = -1*pb/(self.max_torque/self.r_w*50)+math.exp(-abs(self.soc-0.6))+2*math.exp(-abs(self.x-1000+self.y-self.road_width*self.road_num/2))
+            reward = (
+                -1 * pb / (self.max_torque / self.r_w * 50)
+                + math.exp(-abs(self.soc - 0.6))
+                + 2 * math.exp(-abs(self.x - 1000 + self.y - self.road_width * self.road_num / 2))
+            )
             done = False
             info = {}
         return return_state, reward, done, info
 
 
 # if __name__ == "__main__":
-

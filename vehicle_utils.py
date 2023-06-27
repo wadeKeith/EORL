@@ -1,7 +1,7 @@
 import math
 
 
-def bat_dynamic(motor_eff_2d,r_w,soc, force, x_dot, bat_eff_dis, bat_eff_cha, dt, bat_q):
+def bat_dynamic(motor_eff_2d, r_w, soc, force, x_dot, bat_eff_dis, bat_eff_cha, dt, bat_q):
     """
     Function to calculate the battery dynamics
     Args:
@@ -18,10 +18,10 @@ def bat_dynamic(motor_eff_2d,r_w,soc, force, x_dot, bat_eff_dis, bat_eff_cha, dt
     """
 
     if force > 0:
-        total_eff = bat_eff_dis([soc])*motor_eff_2d((force * r_w, abs(x_dot) * 60 / (2 * math.pi * r_w)))
+        total_eff = bat_eff_dis([soc]) * motor_eff_2d((force * r_w, abs(x_dot) * 60 / (2 * math.pi * r_w)))
         bat_power = -1 / total_eff * force * abs(x_dot)
     else:
-        total_eff = bat_eff_cha([soc])*motor_eff_2d((force * r_w, abs(x_dot) * 60 / (2 * math.pi * r_w)))
+        total_eff = bat_eff_cha([soc]) * motor_eff_2d((force * r_w, abs(x_dot) * 60 / (2 * math.pi * r_w)))
         bat_power = -total_eff * force * abs(x_dot)
     next_soc = soc + bat_power * dt / bat_q
     return next_soc

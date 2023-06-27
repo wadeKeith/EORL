@@ -12,6 +12,7 @@ import numpy as np
 import math
 from shapely import geometry
 
+
 def sort_vertices(polygon):
     """Sorts vertices by polar angles.
 
@@ -105,7 +106,7 @@ def __point_to_line_distance(point, line):
 
 def distant_min(polygon1, polygon2):
     # calculate minkowski sum
-    msum = minkowskisum(polygon1, polygon2 * -1)    # 两个多边形的minkowski sum   msum.shape = (n, 2) n为多边形的顶点数
+    msum = minkowskisum(polygon1, polygon2 * -1)  # 两个多边形的minkowski sum   msum.shape = (n, 2) n为多边形的顶点数
     polygon_sum = geometry.Polygon([*msum, msum[0]])
     zero_point = geometry.Point(0, 0)
     if polygon_sum.contains(zero_point):
@@ -122,6 +123,7 @@ def distant_min(polygon1, polygon2):
         min_distant = min(distant)
     return min_distant
 
+
 def rota_rect(box, phi, x, y):
     """
     :param box: 正矩形的四个顶点
@@ -137,6 +139,8 @@ def rota_rect(box, phi, x, y):
 
     new_box = box_matrix.dot(rota_matrix) + np.repeat(np.array([[x, y]]), len(box), 0)
     return new_box
+
+
 def coordination(car_parmeters):
     """
     :param x: 车辆中心x坐标
@@ -146,11 +150,11 @@ def coordination(car_parmeters):
     :param car_width: 车辆宽度
     :return: 车辆四个顶点坐标
     """
-    x, y, phi, car_length, car_width =car_parmeters
+    x, y, phi, car_length, car_width = car_parmeters
     car_box = [
         [x - car_length / 2, y - car_width / 2],
         [x + car_length / 2, y - car_width / 2],
-        [x + car_length / 2, y+ car_width / 2],
+        [x + car_length / 2, y + car_width / 2],
         [x - car_length / 2, y + car_width / 2],
     ]
 
@@ -159,7 +163,7 @@ def coordination(car_parmeters):
 
 
 def e_s_distance(ego_car_parmeters, surronding_car_parmeters):
-    '''
+    """
 
     Args:
         ego_car_parmeters: [x, y, phi, car_length, car_width]
@@ -169,17 +173,14 @@ def e_s_distance(ego_car_parmeters, surronding_car_parmeters):
 
     Returns: minize distance between ego car and surrounding vehicles  [d1, d2, d3, d4, d5, d6, d7, d8]
 
-    '''
+    """
     d_min = []
     ego_car_box = coordination(ego_car_parmeters)
     for key, value in surronding_car_parmeters.items():
         surrounding_vehicle_parmeters = [value["x"], value["y"], value["phi"], value["car_length"], value["car_width"]]
         surronding_car_box = coordination(surrounding_vehicle_parmeters)
-        d_min.append( distant_min(ego_car_box, surronding_car_box))
+        d_min.append(distant_min(ego_car_box, surronding_car_box))
     return d_min
-
-
-
 
 
 if __name__ == "__main__":
