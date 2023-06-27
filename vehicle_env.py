@@ -44,9 +44,11 @@ class VehicleEnv(object):
         self.tau_a = 0.3
         self.rho_a = 1.223
         self.A_f = 2.0
-        self.r_w = 0.2
+        self.r_w = 0.25
+        self.min_torque = -1200
+        self.max_torque = 1200
         self.motor_eff_speed = np.array([0, 1000, 2000, 3000, 4000])
-        self.motor_eff_torque = np.linspace(-1200, 1200, 21)
+        self.motor_eff_torque = np.linspace(self.min_torque, self.max_torque, 21)
         self.motor_eff_eff = (
             np.array(
                 [
@@ -144,12 +146,15 @@ class VehicleEnv(object):
         else:
             done_outofroad = True
         x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
-        if x_dot_next > 50:
+        if 0<=x_dot_next <= 50 :
+            self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
+            done_overacceration = False
+        elif x_dot_next > 50:
             self.x_dot_next = 50
             done_overacceration = True
         else:
-            self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
-            done_overacceration = False
+            self.x_dot_next = 0
+            done_overacceration = True
         self.y_dot_next = (
             self.m * self.x_dot * self.y_dot
             + self.K * self.omega * self.delta_t
@@ -168,7 +173,7 @@ class VehicleEnv(object):
             + self.m * self.g * math.sin(self.theta)
             + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
         )
-        if min(self.motor_eff_torque)/self.r_w <= force <=max(self.motor_eff_torque)/self.r_w:
+        if self.min_torque/self.r_w <= force <=self.max_torque/self.r_w:
             self.force = (
                 action[0] * self.m
                 + self.m * self.g * self.tau_r * math.cos(self.theta)
@@ -176,21 +181,25 @@ class VehicleEnv(object):
                 + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
             )
             done_motor_cant_provide = False
-        elif force < min(self.motor_eff_torque)/self.r_w:
-            self.force = min(self.motor_eff_torque)/self.r_w
+        elif force < self.min_torque/self.r_w:
+            self.force = self.min_torque/self.r_w
             done_motor_cant_provide = False
         else:
-            self.force = max(self.motor_eff_torque)/self.r_w
+            self.force = self.max_torque/self.r_w
             done_motor_cant_provide = True
-        pb = pb_cal(
-            self.motor_eff_2d,
-            self.force,
-            self.x_dot,
-            self.soc,
-            self.r_w,
-            self.battery_eff_dis_1d,
-            self.battery_eff_cha_1d,
-        )[0]
+        try:
+            pb = pb_cal(
+                self.motor_eff_2d,
+                self.force,
+                self.x_dot,
+                self.soc,
+                self.r_w,
+                self.battery_eff_dis_1d,
+                self.battery_eff_cha_1d,
+            )[0]
+        except:
+            print('Motor cant offer the acceration or velocity or SOC ','Force:',self.force,'velocity:',self.x_dot,'SOC:',self.soc)
+
         self.soc_next = bat_dynamic(
             self.motor_eff_2d,
             self.r_w,
@@ -228,7 +237,7 @@ class VehicleEnv(object):
             done = True
             info = {}
         else:
-            reward = -1*pb/(4800*50)+math.exp(-abs(self.soc-0.6))+2*math.exp(-abs(self.x-1000+self.y-self.road_width*self.road_num/2))
+            reward = -1*pb/(self.max_torque/self.r_w*50)+math.exp(-abs(self.soc-0.6))+2*math.exp(-abs(self.x-1000+self.y-self.road_width*self.road_num/2))
             done = False
             info = {}
         return return_state, reward, done, info

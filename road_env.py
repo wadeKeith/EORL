@@ -33,7 +33,7 @@ class RoadEnv(object):
         self.ego_y_dot_initial = 0
         self.ego_phi_initial = 0
         self.ego_omega_initial = 0
-        self.ego_soc_initial = 0.6
+        self.ego_soc_initial = 0.7
 
 
 
@@ -85,7 +85,10 @@ class RoadEnv(object):
         assert isinstance(action, list), "action must be a list"
 
         # update road gradient
-        self.road_gradient = self.road_gradient_fun([self.vehicle_obs["x"], self.vehicle_obs["y"]])[0]
+        try:
+            self.road_gradient = self.road_gradient_fun([self.vehicle_obs["x"], self.vehicle_obs["y"]])[0]
+        except:
+            print('out of road and x:',self.vehicle_obs["x"], 'y:',self.vehicle_obs["y"])
 
         # update theta
         self.vehicle.update_theta(math.radians(self.road_gradient))
@@ -172,7 +175,7 @@ if __name__ == "__main__":
     reward_lists = []
     for i in range(10000):
         obs_lists.append(obs)
-        action = [0, 0]
+        action = [5, 1]
         next_obs, reward, done, info = road_env.step(action)
         obs = next_obs
         reward_lists.append(reward)

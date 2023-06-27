@@ -1,20 +1,17 @@
 import torch
-import numpy as np
-from tqdm import tqdm
-import torch.nn.functional as F
-import os
+
 from agent_env import AgentEnv
 from ppo import PPOContinuous, train_on_policy_agent
 
-have_model = False
+have_model = True
 render_flag = False
 
 
 env = AgentEnv()
 
-actor_lr = 5e-4
-critic_lr = 5e-3
-num_episodes = 2000
+actor_lr = 5e-5
+critic_lr = 5e-4
+num_episodes = 20000
 hidden_dim = 128
 gamma = 0.95
 lmbda = 0.9
@@ -31,6 +28,6 @@ if have_model:
 # train
 return_list = train_on_policy_agent(env, agent, num_episodes,render_flag)
 # save model
-torch.save(agent.actor.state_dict(), "ppo_continuous_actor.pth_1")
+torch.save(agent.actor.state_dict(), "ppo_continuous_actor1.pth")
 
 
