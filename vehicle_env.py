@@ -44,7 +44,7 @@ class VehicleEnv(object):
         self.tau_a = 0.3
         self.rho_a = 1.223
         self.A_f = 2.0
-        self.r_w = 0.25
+        self.r_w = 0.2
         self.motor_eff_speed = np.array([0, 1000, 2000, 3000, 4000])
         self.motor_eff_torque = np.linspace(-1200, 1200, 21)
         self.motor_eff_eff = (
@@ -139,7 +139,17 @@ class VehicleEnv(object):
         # Syetem Dynamics
         self.x_next = self.x + self.delta_t * (self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi))
         self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi)+ self.y_dot * math.cos(self.phi))
-        self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
+        if 0<self.x_next<1000 and 0<self.y_next<self.road_width*self.road_num:
+            done_outofroad = False
+        else:
+            done_outofroad = True
+        x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
+        if x_dot_next > 50:
+            self.x_dot_next = 50
+            done_overacceration = True
+        else:
+            self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
+            done_overacceration = False
         self.y_dot_next = (
             self.m * self.x_dot * self.y_dot
             + self.K * self.omega * self.delta_t
@@ -152,12 +162,26 @@ class VehicleEnv(object):
             + self.K * self.y_dot * self.delta_t
             - self.x_dot * self.a_v * self.c_f * action[1] * self.delta_t
         ) / (self.I_zz * self.x_dot - self.W * self.delta_t)
-        self.force = (
+        force = (
             action[0] * self.m
             + self.m * self.g * self.tau_r * math.cos(self.theta)
             + self.m * self.g * math.sin(self.theta)
             + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
         )
+        if min(self.motor_eff_torque)/self.r_w <= force <=max(self.motor_eff_torque)/self.r_w:
+            self.force = (
+                action[0] * self.m
+                + self.m * self.g * self.tau_r * math.cos(self.theta)
+                + self.m * self.g * math.sin(self.theta)
+                + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
+            )
+            done_motor_cant_provide = False
+        elif force < min(self.motor_eff_torque)/self.r_w:
+            self.force = min(self.motor_eff_torque)/self.r_w
+            done_motor_cant_provide = False
+        else:
+            self.force = max(self.motor_eff_torque)/self.r_w
+            done_motor_cant_provide = True
         pb = pb_cal(
             self.motor_eff_2d,
             self.force,
@@ -199,69 +223,16 @@ class VehicleEnv(object):
             "soc": self.soc_next,
             "force": self.force,
         }
-        if 0<self.x_next<1000 and 0<self.y_next<self.road_width*self.road_num:
-            reward = -1*pb/(4800*50)+math.exp(-abs(self.soc-0.6))+2*math.exp(-abs(self.x-1000+self.y-self.road_width*self.road_num/2))
-            done = False
-            info = {}
-        else:
+        if done_outofroad or done_overacceration or done_motor_cant_provide:
             reward = -1
             done = True
             info = {}
-
+        else:
+            reward = -1*pb/(4800*50)+math.exp(-abs(self.soc-0.6))+2*math.exp(-abs(self.x-1000+self.y-self.road_width*self.road_num/2))
+            done = False
+            info = {}
         return return_state, reward, done, info
 
 
-if __name__ == "__main__":
-    env = VehicleEnv()
+# if __name__ == "__main__":
 
-    obs = env.reset()
-    done = False
-
-    obs_lists = []
-    reward_lists = []
-    for i in range(10000):
-        obs_lists.append(obs)
-        if i <= 10:
-            action = [1, math.pi / 4]
-        # elif 400<=i < 500:
-        #     action = [0, 1]
-        else:
-            action = [-0.001, 0]
-        next_obs, reward, done, info = env.step(action)
-        obs = next_obs
-        reward_lists.append(reward)
-    Reward = sum(reward_lists)
-    x_plot = [obs["x"] for obs in obs_lists]
-    y_plot = [obs["y"] for obs in obs_lists]
-    x_dot_plot = [obs["x_dot"] for obs in obs_lists]
-    y_dot_plot = [obs["y_dot"] for obs in obs_lists]
-    phi_plot = [obs["phi"] for obs in obs_lists]
-    omega_plot = [obs["omega"] for obs in obs_lists]
-
-    from utils import plot_list
-
-    plt.figure(1)
-    plt.subplot(2, 3, 1)
-    plt.plot(x_plot)
-    plt.title("x_plot")
-    plt.subplot(2, 3, 2)
-    plt.plot(y_plot)
-    plt.title("y_plot")
-    plt.subplot(2, 3, 3)
-    plt.plot(x_dot_plot)
-    plt.title("x_dot_plot")
-    plt.subplot(2, 3, 4)
-    plt.plot(y_dot_plot)
-    plt.title("y_dot_plot")
-    plt.subplot(2, 3, 5)
-    plt.plot(phi_plot)
-    plt.title("phi_plot")
-    plt.subplot(2, 3, 6)
-    plt.plot(omega_plot)
-    plt.title("omega_plot")
-    plt.show()
-    print("")
-    plt.figure(2)
-    plt.plot(x_plot, y_plot)
-    plt.title("x_plot,y_plot")
-    plt.show()

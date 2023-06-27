@@ -179,4 +179,4 @@ if __name__ == "__main__":
 
         road_env.plot_road()
         # print(obs['force'])
-    print('')
+    print('reward:',sum(reward_lists))

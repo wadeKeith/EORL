@@ -97,7 +97,7 @@ def compute_advantage(gamma, lmbda, td_delta):
     return torch.tensor(advantage_list, dtype=torch.float)
 
 
-def train_on_policy_agent(env, agent, num_episodes):
+def train_on_policy_agent(env, agent, num_episodes,render_flag):
     return_list = []
     transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
     for i in range(10):
@@ -112,6 +112,8 @@ def train_on_policy_agent(env, agent, num_episodes):
                     action = agent.take_action(state)
                     # print("action: ", action)
                     next_state, reward, done, _ = env.step(action)
+                    if render_flag:
+                        env.render()
                     # env.render()
                     transition_dict["states"].append(state)
                     transition_dict["actions"].append(action)
