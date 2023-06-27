@@ -23,7 +23,7 @@ action_dim = env.action_space.shape[0]  # 连续动作空间
 
 
 agent_test = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
-agent_test.actor.load_state_dict(torch.load("ppo_continuous_actor.pth"))
+agent_test.actor.load_state_dict(torch.load("ppo_continuous_actor1.pth"))
 
 #test
 state,done = env.reset()
