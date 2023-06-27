@@ -10,7 +10,7 @@ def plot_list(list_data, plt_name):
 ###########################################################################
 import numpy as np
 import math
-
+from shapely import geometry
 
 def sort_vertices(polygon):
     """Sorts vertices by polar angles.
@@ -105,16 +105,22 @@ def __point_to_line_distance(point, line):
 
 def distant_min(polygon1, polygon2):
     # calculate minkowski sum
-    msum = minkowskisum(polygon1, polygon2 * -1)
-    distant = []
-    for i in range(msum.shape[0] - 1):
-        distant.append(__point_to_line_distance([0, 0], [msum[i, 0], msum[i, 1], msum[i + 1, 0], msum[i + 1, 1]]))
-    distant.append(
-        __point_to_line_distance(
-            [0, 0], [msum[msum.shape[0] - 1, 0], msum[msum.shape[0] - 1, 1], msum[0, 0], msum[0, 1]]
+    msum = minkowskisum(polygon1, polygon2 * -1)    # 两个多边形的minkowski sum   msum.shape = (n, 2) n为多边形的顶点数
+    polygon_sum = geometry.Polygon([*msum, msum[0]])
+    zero_point = geometry.Point(0, 0)
+    if polygon_sum.contains(zero_point):
+        min_distant = -1
+    else:
+        distant = []
+        for i in range(msum.shape[0] - 1):
+            distant.append(__point_to_line_distance([0, 0], [msum[i, 0], msum[i, 1], msum[i + 1, 0], msum[i + 1, 1]]))
+        distant.append(
+            __point_to_line_distance(
+                [0, 0], [msum[msum.shape[0] - 1, 0], msum[msum.shape[0] - 1, 1], msum[0, 0], msum[0, 1]]
+            )
         )
-    )
-    return min(distant)
+        min_distant = min(distant)
+    return min_distant
 
 def rota_rect(box, phi, x, y):
     """
@@ -177,9 +183,18 @@ def e_s_distance(ego_car_parmeters, surronding_car_parmeters):
 
 
 if __name__ == "__main__":
-    # polygon1 = np.array([[1, 1], [4, 1], [4, 3], [1, 3]])
-    # polygon2 = np.array([[8, 1], [14, 1], [14, 3], [8, 3]])
-    polygon1 = np.array([[-4, 2], [-3, 1], [-6, 2]])
-    polygon2 = np.array([[2, 1], [4, 1], [4, 3], [2, 3]])
+    polygon1 = np.array([[2, 1], [4, 1], [4, 3], [2, 3]])
+    polygon2 = np.array([[1, 2], [2, 1], [3, 2]])
+    # polygon1 = np.array([[-4, 2], [-3, 1], [-6, 2]])
+    # polygon2 = np.array([[2, 1], [4, 1], [4, 3], [2, 3]])
+    msum = minkowskisum(polygon1, polygon2 * -1)
+    # polygon_sum = geometry.Polygon([*msum, msum[0]])
+    # zero_point = geometry.Point(0,0)
+    # print(zero_point)
+    # print(polygon_sum.contains(zero_point))
+    # plt.figure(0)
+    # plt.plot(polygon_sum.exterior.xy[0], polygon_sum.exterior.xy[1])
+    # plt.scatter(zero_point.x, zero_point.y, c='r')
+    # plt.show()
     d_min = distant_min(polygon1, polygon2)
     print(d_min)

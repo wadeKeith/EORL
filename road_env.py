@@ -24,8 +24,18 @@ class RoadEnv(object):
         self.road_num = 3
         self.road_gradient_fun = road_curvature_gradient_build(self.road_length, self.road_width, self.road_num)
 
-        self.vehicle = VehicleEnv()
+        # parameters for ego vehicle
+        self.vehicle = VehicleEnv(road_width=self.road_width, road_length=self.road_length, road_num=self.road_num,car_length=5)
         self.vehicle_obs = None  # vehicle observation
+        self.ego_x_initial = 5
+        self.ego_y_initial = self.road_width/2*3
+        self.ego_x_dot_initial = 20
+        self.ego_y_dot_initial = 0
+        self.ego_phi_initial = 0
+        self.ego_omega_initial = 0
+        self.ego_soc_initial = 0.6
+
+
 
         self.surrounding_vehicles = {
             "1": {"x": self.road_length/5, "y": self.road_width/2, "phi": 0, "v": 0,'car_length':5,'car_width':self.road_width/3*2},
@@ -41,15 +51,35 @@ class RoadEnv(object):
         }  # surrounding vehicles
         self.dmin =None
         self.dmin_next = None
+        self.max_distant = math.sqrt(self.road_length**2 + (self.road_num*self.road_width)**2)
     def reset(self):
         self.road_curvature = 0  # 曲率
-        self.road_gradient = self.road_gradient_fun([5, 3.75 * 3 / 2])[0]
+        self.road_gradient = self.road_gradient_fun([self.ego_x_initial, self.ego_y_initial])[0]
         # update theta
         self.vehicle.update_theta(math.radians(self.road_gradient))
-        self.vehicle_obs = self.vehicle.reset()
+        self.vehicle_obs,done_ego = self.vehicle.reset(
+            self.ego_x_initial,
+            self.ego_y_initial,
+            self.ego_x_dot_initial,
+            self.ego_y_dot_initial,
+            self.ego_phi_initial,
+            self.ego_omega_initial,
+            self.ego_soc_initial
+        )
         self.dmin = e_s_distance([self.vehicle_obs["x"],self.vehicle_obs["y"],self.vehicle_obs["phi"],self.vehicle.car_length,self.vehicle.car_width]
                                  , self.surrounding_vehicles)
-        return self.vehicle_obs,self.dmin
+        self.vehicle_obs['dmin'] = self.dmin
+        if min(self.dmin) <= 0:
+            done_road = True
+        else:
+            done_road = False
+        if done_ego or done_road:
+            done = True
+        else:
+            done = False
+
+
+        return self.vehicle_obs,done
 
     def step(self, action):
         assert isinstance(action, list), "action must be a list"
@@ -59,14 +89,29 @@ class RoadEnv(object):
 
         # update theta
         self.vehicle.update_theta(math.radians(self.road_gradient))
-        next_vehicle_obs, reward, done, info = self.vehicle.step(action)
+        next_vehicle_obs, reward_ego, done_ego, info = self.vehicle.step(action)
+        self.dmin_next = e_s_distance([next_vehicle_obs["x"], next_vehicle_obs["y"], next_vehicle_obs["phi"], self.vehicle.car_length, self.vehicle.car_width]
+                                , self.surrounding_vehicles)
+        next_vehicle_obs['dmin'] = self.dmin_next
+        if min(self.dmin_next) <= 0:
+            done_road = True
+            reward_collision = min(self.dmin_next)
+            info = {}
+        else:
+            done_road = False
+            reward_collision = min(self.dmin_next)/self.max_distant #这里可以考虑将CBF加入这里，进行对奖励补偿
+            info = {}
+
         self.vehicle_obs = next_vehicle_obs
-        self.dmin_next = e_s_distance([self.vehicle_obs["x"], self.vehicle_obs["y"], self.vehicle_obs["phi"], self.vehicle.car_length, self.vehicle.car_width]
-                                    , self.surrounding_vehicles)
-        return [next_vehicle_obs,self.dmin_next], reward, done, info
+        reward = reward_ego + reward_collision
+        if done_ego or done_road:
+            done = True
+        else:
+            done = False
+        return next_vehicle_obs, reward, done, info
 
     def render(self):
-        pass
+        self.plot_road()
 
     def plot_road(self):
         plt.cla()
@@ -120,30 +165,18 @@ class RoadEnv(object):
 
 if __name__ == "__main__":
     road_env = RoadEnv()
+    obs,done = road_env.reset()
 
-    obs,d_min = road_env.reset()
-    done = False
 
     obs_lists = []
-    d_min_lists = []
     reward_lists = []
     for i in range(10000):
         obs_lists.append(obs)
-        d_min_lists.append(d_min)
-        # if i <= 10:
-        #     import math
-        #
-        #     action = [1, math.pi / 4]
-        # # elif 400<=i < 500:
-        # #     action = [0, 1]
-        # else:
-        #     action = [0.5, 0]
         action = [0, 0]
-        [next_obs,d_min_next], reward, done, info = road_env.step(action)
+        next_obs, reward, done, info = road_env.step(action)
         obs = next_obs
-        d_min = d_min_next
         reward_lists.append(reward)
 
         road_env.plot_road()
-        print(obs['force'])
+        # print(obs['force'])
     print('')

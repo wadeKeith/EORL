@@ -6,7 +6,7 @@ from vehicle_utils import bat_dynamic, pb_cal
 
 
 class VehicleEnv(object):
-    def __init__(self) -> None:
+    def __init__(self,road_width,road_length,road_num,car_length):
         self.x = None
         self.y = None
         self.x_dot = None
@@ -86,19 +86,24 @@ class VehicleEnv(object):
         self.bat_q = 25 * 1000 * 3600  # 电池容量 25kwh
 
         self.theta = None
-        self.car_length = 5
-        self.car_width = 3.75 / 3 * 2
+
+        self.road_width = road_width
+        self.road_num = road_num
+        self.road_length = road_length
+        self.car_length = car_length
+        self.car_width = self.road_width / 3 * 2
+
     def update_theta(self, theta):
         self.theta = theta
 
-    def reset(self):
-        self.x = 5
-        self.y = 3.75*3/2
-        self.x_dot = 30
-        self.y_dot = 0
-        self.phi = 0  # 角度
-        self.omega = 0  # 角速度
-        self.soc = 0.6  # state of charge
+    def reset(self,x,y,x_dot,y_dot,phi,omega,soc):
+        self.x = x
+        self.y = y
+        self.x_dot = x_dot
+        self.y_dot = y_dot
+        self.phi = phi  # 角度
+        self.omega = omega  # 角速度
+        self.soc = soc  # state of charge
         self.force = (
             0 * self.m
             + self.m * self.g * self.tau_r * math.cos(self.theta)
@@ -106,43 +111,35 @@ class VehicleEnv(object):
             + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
         )
 
-        # next time step
-        self.x_next = 0
-        self.y_next = 0
-        self.x_dot_next = 0
-        self.y_dot_next = 0
-        self.phi_next = 0  # 角度
-        self.omega_next = 0  # 角速度
-        self.soc_next = 0.6  # state of charge
-
+        # # next time step
+        # self.x_next = 0
+        # self.y_next = 0
+        # self.x_dot_next = 0
+        # self.y_dot_next = 0
+        # self.phi_next = 0  # 角度
+        # self.omega_next = 0  # 角速度
+        # self.soc_next = 0.6  # state of charge
+        if 0 < self.x < 1000 and 0 < self.y < self.road_width * self.road_num:
+            done = False
+        else:
+            done = True
         return {
-            "x": self.x_next,
-            "y": self.y_next,
-            "x_dot": self.x_dot_next,
-            "y_dot": self.y_dot_next,
-            "phi": self.phi_next,
-            "omega": self.omega_next,
-            "soc": self.soc_next,
+            "x": self.x,
+            "y": self.y,
+            "x_dot": self.x_dot,
+            "y_dot": self.y_dot,
+            "phi": self.phi,
+            "omega": self.omega,
+            "soc": self.soc,
             "force": self.force,
-        }
+        },done
 
     def step(self, action):
         assert isinstance(action, list), "action must be a list"
-
-        # Limit Action 这里放入强化时去掉，变成软约束即可
-        if self.x_dot > 50:
-            action[0] = min(action[0], 0)
-        elif self.x_dot < 0:
-            action[0] = max(action[0], 0)
-        elif self.phi>math.radians(5):
-            action[1] = min(action[1], 0)
-        elif self.phi<math.radians(-5):
-            action[1] = max(action[1], 0)
         # Syetem Dynamics
         self.x_next = self.x + self.delta_t * (self.x_dot * abs(math.cos(self.phi)) - self.y_dot * abs(math.sin(self.phi)))
         self.y_next = self.y + self.delta_t * (self.x_dot * abs(math.sin(self.phi))+ self.y_dot * abs(math.cos(self.phi)))
         self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
-
         self.y_dot_next = (
             self.m * self.x_dot * self.y_dot
             + self.K * self.omega * self.delta_t
@@ -169,11 +166,13 @@ class VehicleEnv(object):
             self.r_w,
             self.battery_eff_dis_1d,
             self.battery_eff_cha_1d,
-        )
+        )[0]
         self.soc_next = bat_dynamic(
+            self.motor_eff_2d,
+            self.r_w,
             self.soc,
-            self.force * self.r_w,
-            self.x_dot * 60 / (2 * math.pi * self.r_w),
+            self.force,
+            self.x_dot ,
             self.battery_eff_dis_1d,
             self.battery_eff_cha_1d,
             self.delta_t,
@@ -200,10 +199,15 @@ class VehicleEnv(object):
             "soc": self.soc_next,
             "force": self.force,
         }
+        if 0<self.x_next<1000 and 0<self.y_next<self.road_width*self.road_num:
+            reward = -1*pb/(4800*50)+math.exp(-abs(self.soc-0.6))+2*math.exp(-abs(self.x-1000+self.y-self.road_width*self.road_num/2))
+            done = False
+            info = {}
+        else:
+            reward = -1
+            done = True
+            info = {}
 
-        reward = pb * self.delta_t
-        done = False
-        info = {}
         return return_state, reward, done, info
 
 
