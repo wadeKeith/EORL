@@ -137,8 +137,8 @@ class VehicleEnv(object):
     def step(self, action):
         assert isinstance(action, list), "action must be a list"
         # Syetem Dynamics
-        self.x_next = self.x + self.delta_t * (self.x_dot * abs(math.cos(self.phi)) - self.y_dot * abs(math.sin(self.phi)))
-        self.y_next = self.y + self.delta_t * (self.x_dot * abs(math.sin(self.phi))+ self.y_dot * abs(math.cos(self.phi)))
+        self.x_next = self.x + self.delta_t * (self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi))
+        self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi)+ self.y_dot * math.cos(self.phi))
         self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         self.y_dot_next = (
             self.m * self.x_dot * self.y_dot

@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 import torch.nn.functional as F
-
+import os
 from agent_env import AgentEnv
 
 
@@ -16,7 +16,7 @@ class PolicyNetContinuous(torch.nn.Module):
     def forward(self, x):
         x = F.relu(self.fc1(x))
         mu = 2.0 * torch.tanh(self.fc_mu(x))
-        std = F.softplus(self.fc_std(x))
+        std = F.softplus(self.fc_std(x))+1e-8
         return mu, std
 
 
@@ -158,17 +158,10 @@ if __name__ == "__main__":
     action_dim = env.action_space.shape[0]  # 连续动作空间
     agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
 
+    if os.path.exists("ppo_continuous_actor.pth"):
+        agent.actor.load_state_dict(torch.load("ppo_continuous_actor.pth"))
+    #train
     return_list = train_on_policy_agent(env, agent, num_episodes)
     #save model
     torch.save(agent.actor.state_dict(), "ppo_continuous_actor.pth")
 
-    #load model
-    agent_test = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
-    agent_test.actor.load_state_dict(torch.load("ppo_continuous_actor.pth"))
-
-    #test
-    state,done = env.reset()
-    while not done:
-        action = agent_test.take_action(state)
-        next_obs, reward, done, info = env.step(action)
-        env.render()

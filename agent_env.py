@@ -53,7 +53,7 @@ class AgentEnv(object):
                                      self.max_length,
                                      self.max_length])
         self.observation_space = Box(low=self.state_lower, high=self.state_upper, shape=(8+9,), dtype=np.float32)
-        self.action_space = Box(low=np.array([-2.0, -math.radians(30)]), high=np.array([2.0, math.radians(30)]), dtype=np.float32)
+        self.action_space = Box(low=np.array([-1.5, -math.radians(30)]), high=np.array([1.5, math.radians(30)]), dtype=np.float32)
 
 
     def reset(self):
