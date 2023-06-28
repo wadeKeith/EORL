@@ -100,7 +100,7 @@ def compute_advantage(gamma, lmbda, td_delta):
 def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
     return_list = []
     transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
-    for i in range(10):
+    for i in range(100):
         with tqdm(total=int(num_episodes / 10), desc="Iteration %d" % i) as pbar:
             for i_episode in range(int(num_episodes / 10)):
                 episode_return = 0
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     critic_lr = 5e-4
     num_episodes = 2000
     hidden_dim = 128
-    gamma = 0.999
+    gamma = 0.9999
     lmbda = 0.95
     epochs = 10
     eps = 0.2
