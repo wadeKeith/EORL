@@ -16,17 +16,24 @@ lmbda = 0.9
 epochs = 10
 eps = 0.2
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-# torch.manual_seed(811)
+torch.manual_seed(4444)
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]  # 连续动作空间
 
 
 agent_test = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
-agent_test.actor.load_state_dict(torch.load("ppo_continuous_actor1.pth"))
+agent_test.actor.load_state_dict(torch.load("E:\Github\EORL\model\ppo_continuous_97.pth"))
 
 # test
-state, done = env.reset()
-while not done:
-    action = agent_test.take_action(state)
-    next_obs, reward, done, info = env.step(action)
-    env.render()
+reward_all = []
+for i in range(10):
+    state, done = env.reset()
+    reward_ls = []
+
+    while not done:
+        action = agent_test.take_action(state)
+        next_obs, reward, done, info = env.step(action)
+        reward_ls.append(reward)
+        env.render()
+    reward_all.append(np.sum(reward_ls))
+    print("reward: ", np.mean(reward_all[-10:]))

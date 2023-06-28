@@ -100,7 +100,10 @@ def compute_advantage(gamma, lmbda, td_delta):
 def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
     return_list = []
     transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
+    max_return = 0
     for i in range(100):
+        torch.save(agent.actor.state_dict(),
+                       "./model/ppo_continuous_%d.pth" % i)
         with tqdm(total=int(num_episodes / 10), desc="Iteration %d" % i) as pbar:
             for i_episode in range(int(num_episodes / 10)):
                 episode_return = 0
@@ -124,6 +127,12 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                     episode_return += reward
 
                 return_list.append(episode_return)
+                # if episode_return > max_return:
+                #     if os.path.exists("./model/ppo_continuous_max_%.3f.pth" % max_return):
+                #         os.remove("./model/ppo_continuous_max_%.3f.pth" % max_return)
+                #     torch.save(agent.actor.state_dict(),
+                #                "./model/ppo_continuous_max_%.3f.pth" % episode_return)
+                #     max_return = episode_return
                 agent.update(transition_dict)
                 transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
                 if (i_episode + 1) % 10 == 0:
@@ -133,7 +142,6 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                             "return": "%.3f" % np.mean(return_list[-10:]),
                         }
                     )
-
                 pbar.update(1)
     return return_list
 
@@ -154,6 +162,7 @@ if __name__ == "__main__":
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]  # 连续动作空间
     agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
+    agent.actor.load_state_dict(torch.load("E:\Github\EORL\model\ppo_continuous_max_900.884.pth"))
 
     if os.path.exists("ppo_continuous_actor.pth"):
         agent.actor.load_state_dict(torch.load("ppo_continuous_actor.pth"))

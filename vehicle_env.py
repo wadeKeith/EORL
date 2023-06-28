@@ -141,11 +141,13 @@ class VehicleEnv(object):
         # Syetem Dynamics
         self.x_next = self.x + self.delta_t * (self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi))
         self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
+        # 开出道路惩罚
         if 0 < self.x_next < 1000 and 0 < self.y_next < self.road_width * self.road_num:
             done_outofroad = False
         else:
             done_outofroad = True
         x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
+        # 速度约束
         if 0 <= x_dot_next <= 50:
             self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
             done_overacceration = False
@@ -155,6 +157,16 @@ class VehicleEnv(object):
         else:
             self.x_dot_next = 0
             done_overacceration = True
+        # 到终点的奖励
+        if self.x_next == 1000 and self.y_next==self.road_width * self.road_num / 2:
+            done_arrive = True
+            reward_arrive = 1000
+        else:
+            done_arrive = False
+            reward_arrive = 0
+        # 前后两步距离终点的距离
+        distance_to_goal = 1 * (-math.sqrt((self.x - 1000) ** 2 + (self.y - self.road_width * self.road_num / 2) ** 2))/100
+        # distance_to_goal = (math.sqrt((self.x - 1000)**2 + (self.y - self.road_width * self.road_num / 2)**2)- math.sqrt((self.x_next - 1000)**2 + (self.y_next - self.road_width * self.road_num / 2)**2))
         self.y_dot_next = (
             self.m * self.x_dot * self.y_dot
             + self.K * self.omega * self.delta_t
@@ -240,15 +252,23 @@ class VehicleEnv(object):
             "soc": self.soc_next,
             "force": self.force,
         }
-        if done_outofroad or done_overacceration or done_motor_cant_provide:
-            reward = -1
+        if  done_overacceration or done_motor_cant_provide:
+            reward = -1000
+            done = True
+            info = {}
+        elif done_outofroad:
+            reward = -1000
+            done = True
+            info = {}
+        elif done_arrive:
+            reward = reward_arrive
             done = True
             info = {}
         else:
-            reward = (
-                -1 * pb / (self.max_torque / self.r_w * 50)
-                + math.exp(-abs(self.soc - 0.6))
-                + 2 * math.exp(-abs(self.x - 1000 + self.y - self.road_width * self.road_num / 2))
+            reward = (distance_to_goal
+                # -1 * pb / (self.max_torque / self.r_w * 50)
+                # + math.exp(-abs(self.soc - 0.6))
+                #  +1 *(-math.sqrt((self.x - 1000)**2 + (self.y - self.road_width * self.road_num / 2)**2))/1000
             )
             done = False
             info = {}

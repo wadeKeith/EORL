@@ -173,7 +173,7 @@ class RoadEnv(object):
         next_vehicle_obs["dmin"] = self.dmin_next
         if min(self.dmin_next) <= 0:
             done_road = True
-            reward_collision = min(self.dmin_next)
+            reward_collision = min(self.dmin_next)*1000
             info = {}
         else:
             done_road = False
