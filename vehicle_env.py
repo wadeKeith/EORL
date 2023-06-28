@@ -165,7 +165,8 @@ class VehicleEnv(object):
             done_arrive = False
             reward_arrive = 0
         # 前后两步距离终点的距离
-        distance_to_goal = 1 * (-math.sqrt((self.x - 1000) ** 2 + (self.y - self.road_width * self.road_num / 2) ** 2))/100
+        position_to_goal = [self.x_next-1000, self.y_next-self.road_width * self.road_num / 2]
+        distance_to_goal = -np.linalg.norm(position_to_goal)/100
         # distance_to_goal = (math.sqrt((self.x - 1000)**2 + (self.y - self.road_width * self.road_num / 2)**2)- math.sqrt((self.x_next - 1000)**2 + (self.y_next - self.road_width * self.road_num / 2)**2))
         self.y_dot_next = (
             self.m * self.x_dot * self.y_dot
@@ -252,26 +253,16 @@ class VehicleEnv(object):
             "soc": self.soc_next,
             "force": self.force,
         }
-        if  done_overacceration or done_motor_cant_provide:
-            reward = -1000
-            done = True
-            info = {}
-        elif done_outofroad:
-            reward = -1000
-            done = True
-            info = {}
-        elif done_arrive:
-            reward = reward_arrive
+        if  done_outofroad or done_overacceration or done_motor_cant_provide or done_arrive:
             done = True
             info = {}
         else:
-            reward = (distance_to_goal
-                # -1 * pb / (self.max_torque / self.r_w * 50)
-                # + math.exp(-abs(self.soc - 0.6))
-                #  +1 *(-math.sqrt((self.x - 1000)**2 + (self.y - self.road_width * self.road_num / 2)**2))/1000
-            )
             done = False
             info = {}
+        reward = 1*(abs(self.y_next)+abs(self.y_next-self.road_width* self.road_num))
+            # -1 * pb / (self.max_torque / self.r_w * 50)
+            # + math.exp(-abs(self.soc - 0.6))
+            #  +1 *(-math.sqrt((self.x - 1000)**2 + (self.y - self.road_width * self.road_num / 2)**2))/1000
         return return_state, reward, done, info
 
 

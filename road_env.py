@@ -172,12 +172,14 @@ class RoadEnv(object):
         )
         next_vehicle_obs["dmin"] = self.dmin_next
         if min(self.dmin_next) <= 0:
-            done_road = True
-            reward_collision = min(self.dmin_next)*1000
+            done_road = False
+            # reward_collision = min(self.dmin_next)*1000
+            reward_collision = 0
             info = {}
         else:
             done_road = False
-            reward_collision = min(self.dmin_next) / self.max_distant  # 这里可以考虑将CBF加入这里，进行对奖励补偿
+            reward_collision = 0
+            # reward_collision = min(self.dmin_next) / self.max_distant  # 这里可以考虑将CBF加入这里，进行对奖励补偿
             info = {}
 
         self.vehicle_obs = next_vehicle_obs

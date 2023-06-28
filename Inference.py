@@ -7,7 +7,7 @@ from ppo import PPOContinuous
 
 env = AgentEnv()
 
-actor_lr = 1e-5
+actor_lr = 2e-5
 critic_lr = 5e-3
 num_episodes = 2000
 hidden_dim = 128
@@ -22,7 +22,7 @@ action_dim = env.action_space.shape[0]  # 连续动作空间
 
 
 agent_test = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
-agent_test.actor.load_state_dict(torch.load("E:\Github\EORL\model\ppo_continuous_97.pth"))
+agent_test.actor.load_state_dict(torch.load("E:\Github\EORL\model\ppo_continuous_3.pth"))
 
 # test
 reward_all = []

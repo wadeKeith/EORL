@@ -3,7 +3,7 @@ import torch
 from agent_env import AgentEnv
 from ppo import PPOContinuous, train_on_policy_agent
 
-have_model = False
+have_model = 0
 render_flag = False
 
 
@@ -24,7 +24,7 @@ action_dim = env.action_space.shape[0]  # 连续动作空间
 agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
 
 if have_model:
-    agent.actor.load_state_dict(torch.load("ppo_continuous_actor1.pth"))
+    agent.actor.load_state_dict(torch.load("E:\Github\EORL\model\ppo_continuous_22.pth"))
 # train
 return_list = train_on_policy_agent(env, agent, num_episodes, render_flag)
 # save model
