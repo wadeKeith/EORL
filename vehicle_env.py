@@ -27,7 +27,7 @@ class VehicleEnv(object):
         self.soc_next = None  # 下一时刻电池电量
 
         # self.x_ddot = None
-        self.delta_t = 0.05  # simulate time step
+        self.delta_t = 0.1  # simulate time step
 
         # parameters for vehicle
         self.m = 1400
@@ -143,26 +143,26 @@ class VehicleEnv(object):
         self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
         # 开出道路惩罚
         if 0 < self.x_next < 1000 and 0 < self.y_next < self.road_width * self.road_num:
-            done_outofroad = False
+            done_outofroad = 0
         else:
-            done_outofroad = True
+            done_outofroad = 1
         x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         # 速度约束
         if 0 <= x_dot_next <= 50:
             self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
-            done_overacceration = False
+            done_overacceration = 0
         elif x_dot_next > 50:
             self.x_dot_next = 50
-            done_overacceration = True
+            done_overacceration = 1
         else:
             self.x_dot_next = 0
-            done_overacceration = True
+            done_overacceration = 1
         # 到终点的奖励
         if self.x_next == 1000 and self.y_next==self.road_width * self.road_num / 2:
-            done_arrive = True
+            done_arrive = 1
             reward_arrive = 1000
         else:
-            done_arrive = False
+            done_arrive = 0
             reward_arrive = 0
         # 前后两步距离终点的距离
         position_to_goal = [self.x_next-1000, self.y_next-self.road_width * self.road_num / 2]
@@ -254,12 +254,12 @@ class VehicleEnv(object):
             "force": self.force,
         }
         if  done_outofroad or done_overacceration or done_motor_cant_provide or done_arrive:
-            done = True
+            done = 1
             info = {}
         else:
-            done = False
+            done = 0
             info = {}
-        reward = 1*(abs(self.y_next)+abs(self.y_next-self.road_width* self.road_num))
+        reward = math.exp(-1*math.sqrt((self.y_next-self.road_width* self.road_num/2)**2)/(self.road_width* self.road_num/2))+math.exp(-math.sqrt((self.x_dot_next-30)**2)/30)
             # -1 * pb / (self.max_torque / self.r_w * 50)
             # + math.exp(-abs(self.soc - 0.6))
             #  +1 *(-math.sqrt((self.x - 1000)**2 + (self.y - self.road_width * self.road_num / 2)**2))/1000

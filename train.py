@@ -4,13 +4,13 @@ from agent_env import AgentEnv
 from ppo import PPOContinuous, train_on_policy_agent
 
 have_model = 0
-render_flag = False
+render_flag = 0
 
 
 env = AgentEnv()
 
-actor_lr = 2e-4
-critic_lr = 5e-4
+actor_lr = 4e-4
+critic_lr = 1e-4
 num_episodes = 2000
 hidden_dim = 128
 gamma = 0.9999

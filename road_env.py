@@ -172,12 +172,12 @@ class RoadEnv(object):
         )
         next_vehicle_obs["dmin"] = self.dmin_next
         if min(self.dmin_next) <= 0:
-            done_road = False
+            done_road = 0
             # reward_collision = min(self.dmin_next)*1000
             reward_collision = 0
             info = {}
         else:
-            done_road = False
+            done_road = 0
             reward_collision = 0
             # reward_collision = min(self.dmin_next) / self.max_distant  # 这里可以考虑将CBF加入这里，进行对奖励补偿
             info = {}
@@ -185,9 +185,9 @@ class RoadEnv(object):
         self.vehicle_obs = next_vehicle_obs
         reward = reward_ego + reward_collision
         if done_ego or done_road:
-            done = True
+            done = 1
         else:
-            done = False
+            done = 0
         return next_vehicle_obs, reward, done, info
 
     def render(self):

@@ -22,18 +22,20 @@ action_dim = env.action_space.shape[0]  # 连续动作空间
 
 
 agent_test = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
-agent_test.actor.load_state_dict(torch.load("E:\Github\EORL\model\ppo_continuous_3.pth"))
+agent_test.actor.load_state_dict(torch.load("E:\Github\EORL\model\ppo_continuous_99.pth"))
 
 # test
 reward_all = []
 for i in range(10):
     state, done = env.reset()
     reward_ls = []
-
+    num = 0
     while not done:
         action = agent_test.take_action(state)
         next_obs, reward, done, info = env.step(action)
         reward_ls.append(reward)
         env.render()
+        num+=1
     reward_all.append(np.sum(reward_ls))
     print("reward: ", np.mean(reward_all[-10:]))
+    print("num: ", num)
