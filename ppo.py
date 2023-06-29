@@ -16,7 +16,7 @@ class PolicyNetContinuous(torch.nn.Module):
     def forward(self, x):
         x = F.relu(self.fc1(x))
         mu = torch.tanh(self.fc_mu(x))
-        std = F.softplus(self.fc_std(x)) + 1e-8
+        std = F.softplus(self.fc_std(x))
         return mu, std
 
 
@@ -102,14 +102,12 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
     transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
     max_return = 0
     for i in range(100):
-        torch.save(agent.actor.state_dict(),
-                       "./model/ppo_continuous_%d.pth" % i)
         with tqdm(total=int(num_episodes / 10), desc="Iteration %d" % i) as pbar:
             for i_episode in range(int(num_episodes / 10)):
                 episode_return = 0
 
-                state, done = env.reset()
-
+                state = env.reset()
+                done = False
                 while not done:
                     # print("state: ", state)
                     action = agent.take_action(state)
@@ -127,12 +125,10 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                     episode_return += reward
 
                 return_list.append(episode_return)
-                # if episode_return > max_return:
-                #     if os.path.exists("./model/ppo_continuous_max_%.3f.pth" % max_return):
-                #         os.remove("./model/ppo_continuous_max_%.3f.pth" % max_return)
-                #     torch.save(agent.actor.state_dict(),
-                #                "./model/ppo_continuous_max_%.3f.pth" % episode_return)
-                #     max_return = episode_return
+                if np.mean(return_list[-10:]) > max_return:
+                    torch.save(agent.actor.state_dict(),
+                               "./model/ppo_continuous_%d.pth" % i)
+                    max_return = np.mean(return_list[-10:])
                 agent.update(transition_dict)
                 transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
                 if (i_episode + 1) % 10 == 0:

@@ -61,15 +61,16 @@ class AgentEnv(object):
         )
         self.observation_space = Box(low=self.state_lower, high=self.state_upper, shape=(8 + 9,), dtype=np.float32)
         self.action_space = Box(
-            low=np.array([-1.5, -math.radians(10)]), high=np.array([1.5, math.radians(10)]), dtype=np.float32
+            low=np.array([-1.5, -math.radians(5)]), high=np.array([1.5, math.radians(5)]), dtype=np.float32
         )
 
     def reset(self):
-        obs, done = self.env.reset()
+        obs = self.env.reset()
         # obs_norm = normalize_obs(obs,self.state_upper)
-        return normalize_obs(obs, self.state_upper), done
+        return normalize_obs(obs, self.state_upper)
 
     def step(self, action):
+        # print(action)
         action = map_action(action, self.action_space)
         # print(action)
         next_obs, reward, done, info = self.env.step(action)
@@ -81,7 +82,8 @@ class AgentEnv(object):
 
 if __name__ == "__main__":
     env = AgentEnv()
-    obs, done = env.reset()
+    obs = env.reset()
+    done = False
     print(obs)
     # a =np.array([0, 0, 0, -1, math.radians(-25), -math.inf,0,-4800,-math.inf,-math.inf,-math.inf,-math.inf,-math.inf,-math.inf,-math.inf,-math.inf,-math.inf])
     # print(a.shape)

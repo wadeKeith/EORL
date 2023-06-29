@@ -23,7 +23,7 @@ class RoadEnv(object):
 
         # parameters for ego vehicle
         self.vehicle = VehicleEnv(
-            road_width=self.road_width, road_length=self.road_length, road_num=self.road_num, car_length=5
+            road_width=self.road_width, road_length=self.road_length, road_num=self.road_num
         )
         self.vehicle_obs = None  # vehicle observation
         self.ego_x_initial = 5
@@ -117,7 +117,7 @@ class RoadEnv(object):
         self.road_gradient = self.road_gradient_fun([self.ego_x_initial, self.ego_y_initial])[0]
         # update theta
         self.vehicle.update_theta(math.radians(self.road_gradient))
-        self.vehicle_obs, done_ego = self.vehicle.reset(
+        self.vehicle_obs = self.vehicle.reset(
             self.ego_x_initial,
             self.ego_y_initial,
             self.ego_x_dot_initial,
@@ -137,16 +137,9 @@ class RoadEnv(object):
             self.surrounding_vehicles,
         )
         self.vehicle_obs["dmin"] = self.dmin
-        if min(self.dmin) <= 0:
-            done_road = True
-        else:
-            done_road = False
-        if done_ego or done_road:
-            done = True
-        else:
-            done = False
 
-        return self.vehicle_obs, done
+
+        return self.vehicle_obs
 
     def step(self, action):
         assert isinstance(action, list), "action must be a list"

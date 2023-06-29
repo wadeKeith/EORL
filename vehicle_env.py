@@ -6,7 +6,7 @@ from vehicle_utils import bat_dynamic, pb_cal
 
 
 class VehicleEnv(object):
-    def __init__(self, road_width, road_length, road_num, car_length):
+    def __init__(self, road_width, road_length, road_num):
         self.x = None
         self.y = None
         self.x_dot = None
@@ -92,7 +92,7 @@ class VehicleEnv(object):
         self.road_width = road_width
         self.road_num = road_num
         self.road_length = road_length
-        self.car_length = car_length
+        self.car_length = self.a_v+self.b_v
         self.car_width = self.road_width / 3 * 2
 
     def update_theta(self, theta):
@@ -121,10 +121,6 @@ class VehicleEnv(object):
         # self.phi_next = 0  # 角度
         # self.omega_next = 0  # 角速度
         # self.soc_next = 0.6  # state of charge
-        if 0 < self.x < 1000 and 0 < self.y < self.road_width * self.road_num:
-            done = False
-        else:
-            done = True
         return {
             "x": self.x,
             "y": self.y,
@@ -134,7 +130,7 @@ class VehicleEnv(object):
             "omega": self.omega,
             "soc": self.soc,
             "force": self.force,
-        }, done
+        }
 
     def step(self, action):
         assert isinstance(action, list), "action must be a list"
@@ -148,15 +144,15 @@ class VehicleEnv(object):
             done_outofroad = 1
         x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         # 速度约束
-        if 0 <= x_dot_next <= 50:
-            self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
+        if 0 < x_dot_next < 50:
             done_overacceration = 0
-        elif x_dot_next > 50:
-            self.x_dot_next = 50
+        elif x_dot_next >= 50:
+            action[0] = 0
             done_overacceration = 1
         else:
-            self.x_dot_next = 0
+            action[0] = 0
             done_overacceration = 1
+        self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         # 到终点的奖励
         if self.x_next == 1000 and self.y_next==self.road_width * self.road_num / 2:
             done_arrive = 1
@@ -164,10 +160,6 @@ class VehicleEnv(object):
         else:
             done_arrive = 0
             reward_arrive = 0
-        # 前后两步距离终点的距离
-        position_to_goal = [self.x_next-1000, self.y_next-self.road_width * self.road_num / 2]
-        distance_to_goal = -np.linalg.norm(position_to_goal)/100
-        # distance_to_goal = (math.sqrt((self.x - 1000)**2 + (self.y - self.road_width * self.road_num / 2)**2)- math.sqrt((self.x_next - 1000)**2 + (self.y_next - self.road_width * self.road_num / 2)**2))
         self.y_dot_next = (
             self.m * self.x_dot * self.y_dot
             + self.K * self.omega * self.delta_t
@@ -259,7 +251,12 @@ class VehicleEnv(object):
         else:
             done = 0
             info = {}
-        reward = math.exp(-1*math.sqrt((self.y_next-self.road_width* self.road_num/2)**2)/(self.road_width* self.road_num/2))+math.exp(-math.sqrt((self.x_dot_next-30)**2)/30)
+        reward = (10*math.exp(-1*math.sqrt((self.y_next-self.road_width* self.road_num/2)**2))
+                  +1*math.exp(-math.sqrt((self.x_dot_next-30)**2)/30)
+                  +reward_arrive)
+        # print('a',action)
+        # print("reward_v:",15*math.exp(-math.sqrt((self.x_dot_next-30)**2)/30))
+        # print('reward_y:',10*math.exp(-1*math.sqrt((self.y_next-self.road_width* self.road_num/2)**2)))
             # -1 * pb / (self.max_torque / self.r_w * 50)
             # + math.exp(-abs(self.soc - 0.6))
             #  +1 *(-math.sqrt((self.x - 1000)**2 + (self.y - self.road_width * self.road_num / 2)**2))/1000
