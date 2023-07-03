@@ -83,8 +83,12 @@ class VehicleEnv(object):
         self.bat_eff_soc = np.array([0.1, 0.9])
         self.bat_eff_dis = np.array([0.65, 0.9])
         self.bat_eff_cha = np.array([0.9, 0.7])
-        self.battery_eff_dis_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_dis)
-        self.battery_eff_cha_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_cha)
+        self.battery_eff_dis_1d = interpolate.RegularGridInterpolator(
+            (self.bat_eff_soc,), self.bat_eff_dis
+        )
+        self.battery_eff_cha_1d = interpolate.RegularGridInterpolator(
+            (self.bat_eff_soc,), self.bat_eff_cha
+        )
         self.bat_q = 25 * 1000 * 3600  # 电池容量 25kwh
 
         self.theta = None
@@ -92,7 +96,7 @@ class VehicleEnv(object):
         self.road_width = road_width
         self.road_num = road_num
         self.road_length = road_length
-        self.car_length = self.a_v+self.b_v
+        self.car_length = self.a_v + self.b_v
         self.car_width = self.road_width / 3 * 2
 
     def update_theta(self, theta):
@@ -113,14 +117,20 @@ class VehicleEnv(object):
             + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
         )
 
-        # # next time step
-        # self.x_next = 0
-        # self.y_next = 0
-        # self.x_dot_next = 0
-        # self.y_dot_next = 0
-        # self.phi_next = 0  # 角度
-        # self.omega_next = 0  # 角速度
-        # self.soc_next = 0.6  # state of charge
+        # next time step
+        self.x_next = x
+        self.y_next = y
+        self.x_dot_next = x_dot
+        self.y_dot_next = y_dot
+        self.phi_next = phi  # 角度
+        self.omega_next = omega  # 角速度
+        self.soc_next = soc  # state of charge
+        self.force_next = (
+                0 * self.m
+                + self.m * self.g * self.tau_r * math.cos(self.theta)
+                + self.m * self.g * math.sin(self.theta)
+                + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot ** 2
+        )
         return {
             "x": self.x,
             "y": self.y,
@@ -130,18 +140,28 @@ class VehicleEnv(object):
             "omega": self.omega,
             "soc": self.soc,
             "force": self.force,
+            "x_next": self.x_next,
+            "y_next": self.y_next,
+            "x_dot_next": self.x_dot_next,
+            "y_dot_next": self.y_dot_next,
+            "phi_next": self.phi_next,
+            "omega_next": self.omega_next,
+            "soc_next": self.soc_next,
+            "force_next": self.force_next,
         }
 
     def step(self, action):
         assert isinstance(action, list), "action must be a list"
         # Syetem Dynamics
-        self.x_next = self.x + self.delta_t * (self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi))
-        self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
+        self.x_next = self.x + self.delta_t * (
+            self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi)
+        )
+        self.y_next = self.y + self.delta_t * (
+            self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi)
+        )
         # 开出道路惩罚
-        if 0 < self.x_next < 1000 and 0 < self.y_next < self.road_width * self.road_num:
-            done_outofroad = 0
-        else:
-            done_outofroad = 1
+        done_outofroad = 0 if 0 < self.y_next < self.road_width * self.road_num else 1
+
         x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         # 速度约束
         if 0 < x_dot_next < 50:
@@ -152,9 +172,11 @@ class VehicleEnv(object):
         else:
             action[0] = 0
             done_overacceration = 1
-        self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
+        self.x_dot_next = self.x_dot + self.delta_t * (
+            action[0] + self.y_dot * self.omega
+        )
         # 到终点的奖励
-        if self.x_next == 1000 and self.y_next==self.road_width * self.road_num / 2:
+        if self.x_next == self.road_length:
             done_arrive = 1
             reward_arrive = 0
         else:
@@ -179,7 +201,7 @@ class VehicleEnv(object):
             + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
         )
         if self.min_torque / self.r_w <= force <= self.max_torque / self.r_w:
-            self.force = (
+            self.force_next = (
                 action[0] * self.m
                 + self.m * self.g * self.tau_r * math.cos(self.theta)
                 + self.m * self.g * math.sin(self.theta)
@@ -187,15 +209,15 @@ class VehicleEnv(object):
             )
             done_motor_cant_provide = False
         elif force < self.min_torque / self.r_w:
-            self.force = self.min_torque / self.r_w
+            self.force_next = self.min_torque / self.r_w
             done_motor_cant_provide = False
         else:
-            self.force = self.max_torque / self.r_w
+            self.force_next = self.max_torque / self.r_w
             done_motor_cant_provide = True
         try:
             pb = pb_cal(
                 self.motor_eff_2d,
-                self.force,
+                self.force_next,
                 self.x_dot,
                 self.soc,
                 self.r_w,
@@ -206,7 +228,7 @@ class VehicleEnv(object):
             print(
                 "Motor cant offer the acceration or velocity or SOC ",
                 "Force:",
-                self.force,
+                self.force_next,
                 "velocity:",
                 self.x_dot,
                 "SOC:",
@@ -224,8 +246,27 @@ class VehicleEnv(object):
             self.delta_t,
             self.bat_q,
         )[0]
-
+        # Return State, Reward, Done, Info
+        return_state = {
+            "x": self.x,
+            "y": self.y,
+            "x_dot": self.x_dot,
+            "y_dot": self.y_dot,
+            "phi": self.phi,
+            "omega": self.omega,
+            "soc": self.soc,
+            "force": self.force,
+            "x_next": self.x_next,
+            "y_next": self.y_next,
+            "x_dot_next": self.x_dot_next,
+            "y_dot_next": self.y_dot_next,
+            "phi_next": self.phi_next,
+            "omega_next": self.omega_next,
+            "soc_next": self.soc_next,
+            "force_next": self.force_next,
+        }
         # update state and relate info
+        # TODO 核验所有状态更新是否正确
         self.x = self.x_next
         self.y = self.y_next
         self.x_dot = self.x_dot_next
@@ -233,36 +274,27 @@ class VehicleEnv(object):
         self.phi = self.phi_next
         self.omega = self.omega_next
         self.soc = self.soc_next
+        self.force = self.force_next
 
-        # Return State, Reward, Done, Info
-        return_state = {
-            "x": self.x_next,
-            "y": self.y_next,
-            "x_dot": self.x_dot_next,
-            "y_dot": self.y_dot_next,
-            "phi": self.phi_next,
-            "omega": self.omega_next,
-            "soc": self.soc_next,
-            "force": self.force,
-        }
-        if  done_outofroad or done_overacceration or done_motor_cant_provide or done_arrive:
+
+        if (
+            done_outofroad
+            or done_overacceration
+            or done_motor_cant_provide
+            or done_arrive
+        ):
             done = 1
             info = {}
         else:
             done = 0
             info = {}
-        reward = -abs(self.x_dot_next-30)+(abs(self.y_next-self.road_width* self.road_num)+abs(self.y_next))/2-pb/3000
+        reward = (
+            1
+            -(self.x_dot_next-30)**2/30**2
+             -(self.y_next-self.road_width*self.road_num/2)**2/(self.road_width*self.road_num/2)**2/6
+            # - pb / 3000
+        )
 
-            # (10*math.exp(-1*math.sqrt((self.y_next-self.road_width* self.road_num/2)**2))
-
-
-                  # +reward_arrive)
-        # print('a',action)+10*math.exp(-1*math.sqrt((self.x_next-1000)**2)/1000)
-        # print("reward_v:",15*math.exp(-math.sqrt((self.x_dot_next-30)**2)/30))
-        # print('reward_y:',10*math.exp(-1*math.sqrt((self.y_next-self.road_width* self.road_num/2)**2)))
-            # -1 * pb / (self.max_torque / self.r_w * 50)
-            # + math.exp(-abs(self.soc - 0.6))
-            #  +1 *(-math.sqrt((self.x - 1000)**2 + (self.y - self.road_width * self.road_num / 2)**2))/1000
         return return_state, reward, done, info
 
 

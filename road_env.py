@@ -14,10 +14,10 @@ class RoadEnv(object):
     def __init__(self) -> None:
         self.road_curvature = None
         self.road_gradient = None
-
+        self.surrounding_vehicle_position = 1000
         # parameters for road
         self.road_width = 3.75
-        self.road_length = 1000
+        self.road_length = 10000
         self.road_num = 3
         self.road_gradient_fun = road_curvature_gradient_build(
             self.road_length, self.road_width, self.road_num
@@ -38,9 +38,22 @@ class RoadEnv(object):
         self.ego_omega_initial = 0
         self.ego_soc_initial = 0.7
         self.surrounding_velocity = 10
+
+        self.dmin = None
+        self.x_min = None
+        self.y_min = None
+        self.dmin_next = None
+        self.x_min_next = None
+        self.y_min_next = None
+        self.max_distant = math.sqrt(
+            self.road_length**2 + (self.road_num * self.road_width) ** 2
+        )
+        self.surrounding_vehicles = None
+
+    def reset(self):
         self.surrounding_vehicles = {
             "1": {
-                "x": self.road_length / 5,
+                "x": self.surrounding_vehicle_position / 5 * 2,
                 "y": self.road_width / 2,
                 "phi": 0,
                 "v": self.surrounding_velocity,
@@ -48,7 +61,7 @@ class RoadEnv(object):
                 "car_width": self.road_width / 3 * 2,
             },
             "2": {
-                "x": self.road_length / 5 * 3,
+                "x": self.surrounding_vehicle_position / 5 * 3,
                 "y": self.road_width / 2,
                 "phi": 0,
                 "v": self.surrounding_velocity,
@@ -56,7 +69,7 @@ class RoadEnv(object):
                 "car_width": self.road_width / 3 * 2,
             },
             "3": {
-                "x": self.road_length / 5 * 3,
+                "x": self.surrounding_vehicle_position / 5 * 3,
                 "y": self.road_width / 2 * 5,
                 "phi": 0,
                 "v": self.surrounding_velocity,
@@ -64,7 +77,7 @@ class RoadEnv(object):
                 "car_width": self.road_width / 3 * 2,
             },
             "4": {
-                "x": self.road_length / 5 * 2,
+                "x": self.surrounding_vehicle_position / 5,
                 "y": self.road_width / 2 * 3,
                 "phi": 0,
                 "v": self.surrounding_velocity,
@@ -72,7 +85,7 @@ class RoadEnv(object):
                 "car_width": self.road_width / 3 * 2,
             },
             "5": {
-                "x": self.road_length / 5 ,
+                "x": self.surrounding_vehicle_position / 5 * 2,
                 "y": self.road_width / 2 * 5,
                 "phi": 0,
                 "v": self.surrounding_velocity,
@@ -80,13 +93,6 @@ class RoadEnv(object):
                 "car_width": self.road_width / 3 * 2,
             },
         }  # surrounding vehicles
-        self.dmin = None
-        self.dmin_next = None
-        self.max_distant = math.sqrt(
-            self.road_length**2 + (self.road_num * self.road_width) ** 2
-        )
-
-    def reset(self):
         self.road_curvature = 0  # 曲率
         self.road_gradient = self.road_gradient_fun(
             [self.ego_x_initial, self.ego_y_initial]
@@ -102,18 +108,25 @@ class RoadEnv(object):
             self.ego_omega_initial,
             self.ego_soc_initial,
         )
-        self.dmin = e_s_distance(
+        self.dmin_next, self.x_min_next, self.y_min_next = e_s_distance(
             [
-                self.vehicle_obs["x"],
-                self.vehicle_obs["y"],
-                self.vehicle_obs["phi"],
+                self.vehicle_obs["x_next"],
+                self.vehicle_obs["y_next"],
+                self.vehicle_obs["phi_next"],
                 self.vehicle.car_length,
                 self.vehicle.car_width,
             ],
             self.surrounding_vehicles,
         )
+        self.dmin = self.dmin_next
+        self.x_min = self.x_min_next
+        self.y_min = self.y_min_next
         self.vehicle_obs["dmin"] = self.dmin
-
+        self.vehicle_obs["x_min"] = self.x_min
+        self.vehicle_obs["y_min"] = self.y_min
+        self.vehicle_obs["dmin_next"] = self.dmin_next
+        self.vehicle_obs["x_min_next"] = self.x_min_next
+        self.vehicle_obs["y_min_next"] = self.y_min_next
         return self.vehicle_obs
 
     def step(self, action):
@@ -122,11 +135,11 @@ class RoadEnv(object):
         # update road gradient
         try:
             self.road_gradient = self.road_gradient_fun(
-                [self.vehicle_obs["x"], self.vehicle_obs["y"]]
+                [self.vehicle_obs["x_next"], self.vehicle_obs["y_next"]]
             )[0]
         except:
             print(
-                "out of road and x:", self.vehicle_obs["x"], "y:", self.vehicle_obs["y"]
+                "out of road and x:", self.vehicle_obs["x_next"], "y:", self.vehicle_obs["y_next"]
             )
 
         # update theta
@@ -137,29 +150,33 @@ class RoadEnv(object):
         )
         self.surrounding_vehicles = next_surrounding_vehicles
 
-        self.dmin_next = e_s_distance(
+        self.dmin_next,self.x_min_next,self.y_min_next = e_s_distance(
             [
-                next_vehicle_obs["x"],
-                next_vehicle_obs["y"],
-                next_vehicle_obs["phi"],
+                next_vehicle_obs["x_next"],
+                next_vehicle_obs["y_next"],
+                next_vehicle_obs["phi_next"],
                 self.vehicle.car_length,
                 self.vehicle.car_width,
             ],
             self.surrounding_vehicles,
         )
-        next_vehicle_obs["dmin"] = self.dmin_next
+        next_vehicle_obs["dmin"] = self.dmin
+        next_vehicle_obs["x_min"] = self.x_min
+        next_vehicle_obs["y_min"] = self.y_min
+        next_vehicle_obs["dmin_next"] = self.dmin_next
+        next_vehicle_obs["x_min_next"] = self.x_min_next
+        next_vehicle_obs["y_min_next"] = self.y_min_next
+        self.dmin = self.dmin_next
+        self.x_min = self.x_min_next
+        self.y_min = self.y_min_next
+        self.vehicle_obs = next_vehicle_obs
         if min(self.dmin_next) <= 0:
-            done_road = 0
-            # reward_collision = min(self.dmin_next)*1000
-            reward_collision = 0
+            done_road = 1
             info = {}
         else:
             done_road = 0
-            reward_collision = min(self.dmin_next)/10
             info = {}
-        self.dmin = self.dmin_next
-        self.vehicle_obs = next_vehicle_obs
-        reward = (reward_ego + reward_collision)/100
+        reward = reward_ego
         if done_ego or done_road:
             done = 1
         else:
@@ -249,9 +266,9 @@ if __name__ == "__main__":
     done = False
     obs_lists = []
     reward_lists = []
-    for i in range(10000):
+    while not done:
         obs_lists.append(obs)
-        action = [4, 0]
+        action = [2, 0]
         next_obs, reward, done, info = road_env.step(action)
         obs = next_obs
         reward_lists.append(reward)
@@ -259,3 +276,4 @@ if __name__ == "__main__":
         road_env.plot_road()
         # print(obs['force'])
     print("reward:", sum(reward_lists))
+    print("obs:", obs_lists[-1])

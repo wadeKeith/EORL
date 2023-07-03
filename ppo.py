@@ -10,11 +10,13 @@ class PolicyNetContinuous(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim):
         super(PolicyNetContinuous, self).__init__()
         self.fc1 = torch.nn.Linear(state_dim, hidden_dim)
+        self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
         self.fc_mu = torch.nn.Linear(hidden_dim, action_dim)
-        self.fc_std = torch.nn.Linear(hidden_dim, action_dim, bias=True)
+        self.fc_std = torch.nn.Linear(hidden_dim, action_dim)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
         mu = torch.tanh(self.fc_mu(x))
         std = F.softplus(self.fc_std(x))
         return mu, std
@@ -24,11 +26,13 @@ class ValueNet(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim):
         super(ValueNet, self).__init__()
         self.fc1 = torch.nn.Linear(state_dim, hidden_dim)
-        self.fc2 = torch.nn.Linear(hidden_dim, 1)
+        self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = torch.nn.Linear(hidden_dim, 1)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
-        return self.fc2(x)
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
 
 
 class PPOContinuous:
@@ -69,7 +73,7 @@ class PPOContinuous:
         # 动作是正态分布
         old_log_probs = action_dists.log_prob(actions)
 
-        for _ in range(1):
+        for _ in range((states.size()[0]) // 90):
             mu, std = self.actor(states)
             action_dists = torch.distributions.Normal(mu, std)
             log_probs = action_dists.log_prob(actions)
@@ -117,7 +121,6 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                     next_state, reward, done, _ = env.step(action)
                     if render_flag:
                         env.render()
-                    # env.render()
                     transition_dict["states"].append(state)
                     transition_dict["actions"].append(action)
                     transition_dict["next_states"].append(next_state)
@@ -145,7 +148,7 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                     )
                 pbar.update(1)
         torch.save(agent.actor.state_dict(),
-                   "./model/ppo_continuous_%d.pth" % i)
+                   "./model/ppo_continuous_%d.pkl" % i)
     return return_list
 
 
@@ -162,13 +165,10 @@ if __name__ == "__main__":
     eps = 0.2
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     torch.manual_seed(4444)
-    state_dim = env.observation_space.shape[0]
+    state_dim = env.observation_space.shape[0]+30
     action_dim = env.action_space.shape[0]  # 连续动作空间
     agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
-    agent.actor.load_state_dict(torch.load("E:\Github\EORL\model\ppo_continuous_max_900.884.pth"))
 
-    if os.path.exists("ppo_continuous_actor.pth"):
-        agent.actor.load_state_dict(torch.load("ppo_continuous_actor.pth"))
     # train
     return_list = train_on_policy_agent(env, agent, num_episodes)
     # save model

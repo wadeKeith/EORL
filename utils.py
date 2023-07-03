@@ -57,7 +57,9 @@ def minkowskisum(pol1, pol2):
     pol2 = sort_vertices(pol2)
 
     # sort vertices so that is starts with lowest y-value
-    min1, min2 = np.argmin(pol1[:, 1]), np.argmin(pol2[:, 1])  # index of vertex with min y value
+    min1, min2 = np.argmin(pol1[:, 1]), np.argmin(
+        pol2[:, 1]
+    )  # index of vertex with min y value
     pol1 = np.vstack((pol1[:min1], pol1[min1:]))
     pol2 = np.vstack((pol2[:min2], pol2[min2:]))
 
@@ -66,7 +68,9 @@ def minkowskisum(pol1, pol2):
     # iterate through all the vertices
     while i < len(pol1) or j < len(pol2):
         msum.append(pol1[i % l1] + pol2[j % l2])
-        cross = crossprod((pol1[(i + 1) % l1] - pol1[i % l1]), pol2[(j + 1) % l2] - pol2[j % l2])
+        cross = crossprod(
+            (pol1[(i + 1) % l1] - pol1[i % l1]), pol2[(j + 1) % l2] - pol2[j % l2]
+        )
         # using right-hand rule choose the vector with the lower polar angle and iterate this polygon's vertex
         if cross >= 0:
             i += 1
@@ -95,33 +99,59 @@ def __point_to_line_distance(point, line):
             iy = __line_magnitude(px, py, x2, y2)
             if ix > iy:
                 distance = iy
+                x_min = x2
+                y_min = y2
             else:
                 distance = ix
+                x_min = x1
+                y_min = y1
         else:
             ix = x1 + u * (x2 - x1)
             iy = y1 + u * (y2 - y1)
             distance = __line_magnitude(px, py, ix, iy)
-        return distance
+            x_min = ix
+            y_min = iy
+        return distance, x_min, y_min
 
 
 def distant_min(polygon1, polygon2):
     # calculate minkowski sum
-    msum = minkowskisum(polygon1, polygon2 * -1)  # 两个多边形的minkowski sum   msum.shape = (n, 2) n为多边形的顶点数
+    msum = minkowskisum(
+        polygon1, polygon2 * -1
+    )  # 两个多边形的minkowski sum   msum.shape = (n, 2) n为多边形的顶点数
     polygon_sum = geometry.Polygon([*msum, msum[0]])
     zero_point = geometry.Point(0, 0)
     if polygon_sum.contains(zero_point):
         min_distant = -1
+        min_x = 0
+        min_y = 0
     else:
         distant = []
+        x_min_ls = []
+        y_min_ls = []
         for i in range(msum.shape[0] - 1):
-            distant.append(__point_to_line_distance([0, 0], [msum[i, 0], msum[i, 1], msum[i + 1, 0], msum[i + 1, 1]]))
-        distant.append(
-            __point_to_line_distance(
-                [0, 0], [msum[msum.shape[0] - 1, 0], msum[msum.shape[0] - 1, 1], msum[0, 0], msum[0, 1]]
+            min_distant, x_min, y_min = __point_to_line_distance(
+                [0, 0], [msum[i, 0], msum[i, 1], msum[i + 1, 0], msum[i + 1, 1]]
             )
+            distant.append(min_distant)
+            x_min_ls.append(x_min)
+            y_min_ls.append(y_min)
+        min_distant, x_min, y_min = __point_to_line_distance(
+            [0, 0],
+            [
+                msum[msum.shape[0] - 1, 0],
+                msum[msum.shape[0] - 1, 1],
+                msum[0, 0],
+                msum[0, 1],
+            ],
         )
+        distant.append(min_distant)
+        x_min_ls.append(x_min)
+        y_min_ls.append(y_min)
         min_distant = min(distant)
-    return min_distant
+        min_x = abs(x_min_ls[distant.index(min(distant))])
+        min_y = abs(y_min_ls[distant.index(min(distant))])
+    return min_distant, min_x, min_y
 
 
 def rota_rect(box, phi, x, y):
@@ -135,7 +165,9 @@ def rota_rect(box, phi, x, y):
     # 旋转矩形
     box_matrix = np.array(box) - np.repeat(np.array([[x, y]]), len(box), 0)
     phi = -phi / 180.0 * np.pi
-    rota_matrix = np.array([[np.cos(phi), -np.sin(phi)], [np.sin(phi), np.cos(phi)]], np.float32)
+    rota_matrix = np.array(
+        [[np.cos(phi), -np.sin(phi)], [np.sin(phi), np.cos(phi)]], np.float32
+    )
 
     new_box = box_matrix.dot(rota_matrix) + np.repeat(np.array([[x, y]]), len(box), 0)
     return new_box
@@ -175,14 +207,26 @@ def e_s_distance(ego_car_parmeters, surronding_car_parmeters):
 
     """
     d_min = []
+    x_min = []
+    y_min = []
     ego_car_box = coordination(ego_car_parmeters)
     for key, value in surronding_car_parmeters.items():
-        surrounding_vehicle_parmeters = [value["x"], value["y"], value["phi"], value["car_length"], value["car_width"]]
+        surrounding_vehicle_parmeters = [
+            value["x"],
+            value["y"],
+            value["phi"],
+            value["car_length"],
+            value["car_width"],
+        ]
         surronding_car_box = coordination(surrounding_vehicle_parmeters)
-        d_min.append(distant_min(ego_car_box, surronding_car_box))
-    return d_min
+        min_distant, min_x, min_y = distant_min(ego_car_box, surronding_car_box)
+        d_min.append(min_distant)
+        x_min.append(min_x)
+        y_min.append(min_y)
+    return d_min, x_min, y_min
 
-def dynamic_surrounding_vehicle(surounding_car_parmeters,delta_T):
+
+def dynamic_surrounding_vehicle(surounding_car_parmeters, delta_T):
     """
     Args:
         surounding_car_parmeters: {1:{x, y, phi, car_length, car_width},       for surrounding vehicles
@@ -196,13 +240,17 @@ def dynamic_surrounding_vehicle(surounding_car_parmeters,delta_T):
     for key, value in surounding_car_parmeters.items():
         surrounding_vehicle_velocity = value["v"]
         surrounding_vehicle_x = value["x"]
-        next_surrounding_vehicle_x = surrounding_vehicle_x + surrounding_vehicle_velocity * delta_T
-        surrounding_vehicle_parmeters_next = {'x': next_surrounding_vehicle_x,
-                                                'y': value["y"],
-                                                'phi': value["phi"],
-                                                'v': value["v"],  # m/s
-                                                'car_length': value["car_length"],
-                                                'car_width': value["car_width"]}
+        next_surrounding_vehicle_x = (
+            surrounding_vehicle_x + surrounding_vehicle_velocity * delta_T
+        )
+        surrounding_vehicle_parmeters_next = {
+            "x": next_surrounding_vehicle_x,
+            "y": value["y"],
+            "phi": value["phi"],
+            "v": value["v"],  # m/s
+            "car_length": value["car_length"],
+            "car_width": value["car_width"],
+        }
         dynamic_surrounding_vehicle[key] = surrounding_vehicle_parmeters_next
     return dynamic_surrounding_vehicle
 
