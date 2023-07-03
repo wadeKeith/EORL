@@ -182,6 +182,30 @@ def e_s_distance(ego_car_parmeters, surronding_car_parmeters):
         d_min.append(distant_min(ego_car_box, surronding_car_box))
     return d_min
 
+def dynamic_surrounding_vehicle(surounding_car_parmeters,delta_T):
+    """
+    Args:
+        surounding_car_parmeters: {1:{x, y, phi, car_length, car_width},       for surrounding vehicles
+                                   2:{x, y, phi, car_length, car_width},
+                                  ......}
+
+    Returns: surrounding vehicles next parameters
+
+    """
+    dynamic_surrounding_vehicle = {}
+    for key, value in surounding_car_parmeters.items():
+        surrounding_vehicle_velocity = value["v"]
+        surrounding_vehicle_x = value["x"]
+        next_surrounding_vehicle_x = surrounding_vehicle_x + surrounding_vehicle_velocity * delta_T
+        surrounding_vehicle_parmeters_next = {'x': next_surrounding_vehicle_x,
+                                                'y': value["y"],
+                                                'phi': value["phi"],
+                                                'v': value["v"],  # m/s
+                                                'car_length': value["car_length"],
+                                                'car_width': value["car_width"]}
+        dynamic_surrounding_vehicle[key] = surrounding_vehicle_parmeters_next
+    return dynamic_surrounding_vehicle
+
 
 if __name__ == "__main__":
     polygon1 = np.array([[2, 1], [4, 1], [4, 3], [2, 3]])

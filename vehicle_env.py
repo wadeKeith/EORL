@@ -156,7 +156,7 @@ class VehicleEnv(object):
         # 到终点的奖励
         if self.x_next == 1000 and self.y_next==self.road_width * self.road_num / 2:
             done_arrive = 1
-            reward_arrive = 1000
+            reward_arrive = 0
         else:
             done_arrive = 0
             reward_arrive = 0
@@ -251,10 +251,13 @@ class VehicleEnv(object):
         else:
             done = 0
             info = {}
-        reward = (10*math.exp(-1*math.sqrt((self.y_next-self.road_width* self.road_num/2)**2))
-                  +1*math.exp(-math.sqrt((self.x_dot_next-30)**2)/30)
-                  +reward_arrive)
-        # print('a',action)
+        reward = -abs(self.x_dot_next-30)+(abs(self.y_next-self.road_width* self.road_num)+abs(self.y_next))/2-pb/3000
+
+            # (10*math.exp(-1*math.sqrt((self.y_next-self.road_width* self.road_num/2)**2))
+
+
+                  # +reward_arrive)
+        # print('a',action)+10*math.exp(-1*math.sqrt((self.x_next-1000)**2)/1000)
         # print("reward_v:",15*math.exp(-math.sqrt((self.x_dot_next-30)**2)/30))
         # print('reward_y:',10*math.exp(-1*math.sqrt((self.y_next-self.road_width* self.road_num/2)**2)))
             # -1 * pb / (self.max_torque / self.r_w * 50)

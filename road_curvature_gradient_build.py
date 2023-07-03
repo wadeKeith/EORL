@@ -4,7 +4,7 @@ from scipy import interpolate
 
 
 def road_curvature_gradient_build(road_lenth, road_width, road_num):
-    x_max = road_lenth
+    x_max = road_lenth*10
     y_max = road_width * road_num
     x_list = np.linspace(0, x_max, 1000)
     y_list = np.linspace(0, y_max, 1000)

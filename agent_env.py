@@ -37,7 +37,7 @@ class AgentEnv(object):
         self.env = RoadEnv()
         self.max_length = math.sqrt(self.env.road_width**2 + self.env.road_length**2)
         # define observation space and action space
-        self.state_lower = np.array([0, 0, 0, -1, math.radians(-25), -2 * math.pi, 0, -4800, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        self.state_lower = np.array([0, 0, 0, -1, math.radians(-25), -math.pi, 0, -4800, 0, 0, 0, 0, 0])
         self.state_upper = np.array(
             [
                 self.env.road_length,
@@ -45,7 +45,7 @@ class AgentEnv(object):
                 50,
                 1,
                 math.radians(25),
-                2 * math.pi,
+                math.pi,
                 1,
                 4800,
                 self.max_length,
@@ -53,15 +53,11 @@ class AgentEnv(object):
                 self.max_length,
                 self.max_length,
                 self.max_length,
-                self.max_length,
-                self.max_length,
-                self.max_length,
-                self.max_length,
             ]
         )
-        self.observation_space = Box(low=self.state_lower, high=self.state_upper, shape=(8 + 9,), dtype=np.float32)
+        self.observation_space = Box(low=self.state_lower, high=self.state_upper, shape=(8 + 5,), dtype=np.float32)
         self.action_space = Box(
-            low=np.array([-1.5, -math.radians(5)]), high=np.array([1.5, math.radians(5)]), dtype=np.float32
+            low=np.array([-2, -math.radians(5)]), high=np.array([1.5, math.radians(5)]), dtype=np.float32
         )
 
     def reset(self):
@@ -70,10 +66,11 @@ class AgentEnv(object):
         return normalize_obs(obs, self.state_upper)
 
     def step(self, action):
-        # print(action)
         action = map_action(action, self.action_space)
-        # print(action)
         next_obs, reward, done, info = self.env.step(action)
+        # print(next_obs['x_dot'])
+        # print(next_obs['x'])
+        # print(reward)
         return normalize_obs(next_obs, self.state_upper), reward, done, info
 
     def render(self):

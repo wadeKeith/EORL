@@ -99,6 +99,7 @@ def compute_advantage(gamma, lmbda, td_delta):
 
 def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
     return_list = []
+    num_ls = []
     transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
     max_return = 0
     for i in range(100):
@@ -108,6 +109,7 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
 
                 state = env.reset()
                 done = False
+                num = 0
                 while not done:
                     # print("state: ", state)
                     action = agent.take_action(state)
@@ -123,12 +125,14 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                     transition_dict["dones"].append(done)
                     state = next_state
                     episode_return += reward
+                    num += 1
 
                 return_list.append(episode_return)
-                if np.mean(return_list[-10:]) > max_return:
-                    torch.save(agent.actor.state_dict(),
-                               "./model/ppo_continuous_%d.pth" % i)
-                    max_return = np.mean(return_list[-10:])
+                num_ls.append(num)
+                # if np.mean(return_list[-10:]) > max_return:
+                #     torch.save(agent.actor.state_dict(),
+                #                "./model/ppo_continuous_%d.pth" % i)
+                #     max_return = np.mean(return_list[-10:])
                 agent.update(transition_dict)
                 transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
                 if (i_episode + 1) % 10 == 0:
@@ -136,9 +140,12 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                         {
                             "episode": "%d" % (num_episodes / 10 * i + i_episode + 1),
                             "return": "%.3f" % np.mean(return_list[-10:]),
+                            "num_steps": "%.3f" % np.mean(num_ls[-10:]),
                         }
                     )
                 pbar.update(1)
+        torch.save(agent.actor.state_dict(),
+                   "./model/ppo_continuous_%d.pth" % i)
     return return_list
 
 
