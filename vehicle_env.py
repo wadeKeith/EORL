@@ -254,7 +254,7 @@ class VehicleEnv(object):
             "theta_next": self.theta_next,
         }
         # update state and relate info
-        # TODO 核验所有状态更新是否正确
+
         self.x = self.x_next
         self.y = self.y_next
         self.x_dot = self.x_dot_next
@@ -277,8 +277,8 @@ class VehicleEnv(object):
             done = 0
             info = {}
         reward = (
-            1
-            -(self.x_dot_next-30)**2/30**2
+            (1
+            -(self.x_dot_next-30)**2/30**2)*2
              -(self.y_next-self.road_width*self.road_num/2)**2/(self.road_width*self.road_num/2)**2/6
             - pb / (self.max_torque / self.r_w*50)
         )
