@@ -274,6 +274,6 @@ if __name__ == "__main__":
         reward_lists.append(reward)
 
         road_env.plot_road()
-        # print(obs['force'])
+
     print("reward:", sum(reward_lists))
     print("obs:", obs_lists[-1])

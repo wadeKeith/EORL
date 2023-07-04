@@ -3,14 +3,14 @@ import torch
 from agent_env import AgentEnv
 from ppo import PPOContinuous, train_on_policy_agent
 
-have_model = 1
+have_model = 0
 render_flag = 0
 
 
 env = AgentEnv()
 
-actor_lr = 6e-5
-critic_lr = 1e-4
+actor_lr = 8e-5
+critic_lr = 4e-4
 num_episodes = 5000
 hidden_dim = 128
 gamma = 0.9999

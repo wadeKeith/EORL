@@ -23,7 +23,6 @@ class VehicleEnv(object):
         self.y_dot_next = None
         self.phi_next = None  # 下一时刻角度
         self.omega_next = None  # 下一时刻角速度
-        self.force_next = None  # 下一时刻驱动力
         self.soc_next = None  # 下一时刻电池电量
 
         # self.x_ddot = None
@@ -92,6 +91,7 @@ class VehicleEnv(object):
         self.bat_q = 25 * 1000 * 3600  # 电池容量 25kwh
 
         self.theta = None
+        self.theta_next = None
 
         self.road_width = road_width
         self.road_num = road_num
@@ -100,7 +100,7 @@ class VehicleEnv(object):
         self.car_width = self.road_width / 3 * 2
 
     def update_theta(self, theta):
-        self.theta = theta
+        self.theta_next = theta
 
     def reset(self, x, y, x_dot, y_dot, phi, omega, soc):
         self.x = x
@@ -110,13 +110,7 @@ class VehicleEnv(object):
         self.phi = phi  # 角度
         self.omega = omega  # 角速度
         self.soc = soc  # state of charge
-        self.force = (
-            0 * self.m
-            + self.m * self.g * self.tau_r * math.cos(self.theta)
-            + self.m * self.g * math.sin(self.theta)
-            + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
-        )
-
+        self.theta = self.theta_next
         # next time step
         self.x_next = x
         self.y_next = y
@@ -125,12 +119,6 @@ class VehicleEnv(object):
         self.phi_next = phi  # 角度
         self.omega_next = omega  # 角速度
         self.soc_next = soc  # state of charge
-        self.force_next = (
-                0 * self.m
-                + self.m * self.g * self.tau_r * math.cos(self.theta)
-                + self.m * self.g * math.sin(self.theta)
-                + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot ** 2
-        )
         return {
             "x": self.x,
             "y": self.y,
@@ -139,7 +127,7 @@ class VehicleEnv(object):
             "phi": self.phi,
             "omega": self.omega,
             "soc": self.soc,
-            "force": self.force,
+            "theta": self.theta,
             "x_next": self.x_next,
             "y_next": self.y_next,
             "x_dot_next": self.x_dot_next,
@@ -147,7 +135,7 @@ class VehicleEnv(object):
             "phi_next": self.phi_next,
             "omega_next": self.omega_next,
             "soc_next": self.soc_next,
-            "force_next": self.force_next,
+            "theta_next": self.theta_next,
         }
 
     def step(self, action):
@@ -196,28 +184,28 @@ class VehicleEnv(object):
         ) / (self.I_zz * self.x_dot - self.W * self.delta_t)
         force = (
             action[0] * self.m
-            + self.m * self.g * self.tau_r * math.cos(self.theta)
-            + self.m * self.g * math.sin(self.theta)
+            + self.m * self.g * self.tau_r * math.cos(self.theta_next)
+            + self.m * self.g * math.sin(self.theta_next)
             + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
         )
         if self.min_torque / self.r_w <= force <= self.max_torque / self.r_w:
-            self.force_next = (
+            self.force = (
                 action[0] * self.m
-                + self.m * self.g * self.tau_r * math.cos(self.theta)
-                + self.m * self.g * math.sin(self.theta)
+                + self.m * self.g * self.tau_r * math.cos(self.theta_next)
+                + self.m * self.g * math.sin(self.theta_next)
                 + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
             )
             done_motor_cant_provide = False
         elif force < self.min_torque / self.r_w:
-            self.force_next = self.min_torque / self.r_w
+            self.force = self.min_torque / self.r_w
             done_motor_cant_provide = False
         else:
-            self.force_next = self.max_torque / self.r_w
+            self.force = self.max_torque / self.r_w
             done_motor_cant_provide = True
         try:
             pb = pb_cal(
                 self.motor_eff_2d,
-                self.force_next,
+                self.force,
                 self.x_dot,
                 self.soc,
                 self.r_w,
@@ -228,7 +216,7 @@ class VehicleEnv(object):
             print(
                 "Motor cant offer the acceration or velocity or SOC ",
                 "Force:",
-                self.force_next,
+                self.force,
                 "velocity:",
                 self.x_dot,
                 "SOC:",
@@ -255,7 +243,7 @@ class VehicleEnv(object):
             "phi": self.phi,
             "omega": self.omega,
             "soc": self.soc,
-            "force": self.force,
+            "theta": self.theta,
             "x_next": self.x_next,
             "y_next": self.y_next,
             "x_dot_next": self.x_dot_next,
@@ -263,7 +251,7 @@ class VehicleEnv(object):
             "phi_next": self.phi_next,
             "omega_next": self.omega_next,
             "soc_next": self.soc_next,
-            "force_next": self.force_next,
+            "theta_next": self.theta_next,
         }
         # update state and relate info
         # TODO 核验所有状态更新是否正确
@@ -274,7 +262,7 @@ class VehicleEnv(object):
         self.phi = self.phi_next
         self.omega = self.omega_next
         self.soc = self.soc_next
-        self.force = self.force_next
+        self.theta = self.theta_next
 
 
         if (
