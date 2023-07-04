@@ -160,7 +160,7 @@ class VehicleEnv(object):
             self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi)
         )
         # 开出道路惩罚
-        done_outofroad = 0 if 0 < self.y_next < self.road_width * self.road_num else 1
+        done_outofroad = 0 if 0 < self.y_next < self.road_width * self.road_num and 0<self.x_next<self.road_length else 1
 
         x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         # 速度约束
@@ -292,7 +292,7 @@ class VehicleEnv(object):
             1
             -(self.x_dot_next-30)**2/30**2
              -(self.y_next-self.road_width*self.road_num/2)**2/(self.road_width*self.road_num/2)**2/6
-            # - pb / 3000
+            - pb / (self.max_torque / self.r_w*50)
         )
 
         return return_state, reward, done, info

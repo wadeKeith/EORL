@@ -14,7 +14,7 @@ action_dim = env.action_space.shape[0]  # 连续动作空间
 
 
 agent_test =  PolicyNetContinuous(state_dim, hidden_dim, action_dim).to(device)
-agent_test.load_state_dict(torch.load("./model/ppo_continuous_2.pkl"))
+agent_test.load_state_dict(torch.load("./model/ppo_continuous_1.pkl"))
 agent_test.eval()
 # test
 reward_all = []

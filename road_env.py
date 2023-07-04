@@ -53,7 +53,7 @@ class RoadEnv(object):
     def reset(self):
         self.surrounding_vehicles = {
             "1": {
-                "x": self.surrounding_vehicle_position / 5 * 2,
+                "x": self.surrounding_vehicle_position / 3 * 2,
                 "y": self.road_width / 2,
                 "phi": 0,
                 "v": self.surrounding_velocity,
@@ -61,15 +61,15 @@ class RoadEnv(object):
                 "car_width": self.road_width / 3 * 2,
             },
             "2": {
-                "x": self.surrounding_vehicle_position / 5 * 3,
-                "y": self.road_width / 2,
+                "x": self.surrounding_vehicle_position ,
+                "y": self.road_width / 2*3,
                 "phi": 0,
                 "v": self.surrounding_velocity,
                 "car_length": 5,
                 "car_width": self.road_width / 3 * 2,
             },
             "3": {
-                "x": self.surrounding_vehicle_position / 5 * 3,
+                "x": self.surrounding_vehicle_position / 5 *0,
                 "y": self.road_width / 2 * 5,
                 "phi": 0,
                 "v": self.surrounding_velocity,
@@ -77,7 +77,7 @@ class RoadEnv(object):
                 "car_width": self.road_width / 3 * 2,
             },
             "4": {
-                "x": self.surrounding_vehicle_position / 5,
+                "x": self.surrounding_vehicle_position / 3,
                 "y": self.road_width / 2 * 3,
                 "phi": 0,
                 "v": self.surrounding_velocity,
@@ -85,7 +85,7 @@ class RoadEnv(object):
                 "car_width": self.road_width / 3 * 2,
             },
             "5": {
-                "x": self.surrounding_vehicle_position / 5 * 2,
+                "x": self.surrounding_vehicle_position / 3 * 2,
                 "y": self.road_width / 2 * 5,
                 "phi": 0,
                 "v": self.surrounding_velocity,
