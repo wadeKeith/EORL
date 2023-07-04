@@ -19,9 +19,7 @@ class RoadEnv(object):
         self.road_width = 3.75
         self.road_length = 10000
         self.road_num = 3
-        self.road_gradient_fun = road_curvature_gradient_build(
-            self.road_length, self.road_width, self.road_num
-        )
+        self.road_gradient_fun = road_curvature_gradient_build(self.road_length, self.road_width, self.road_num)
 
         # parameters for ego vehicle
         self.vehicle = VehicleEnv(
@@ -45,9 +43,7 @@ class RoadEnv(object):
         self.dmin_next = None
         self.x_min_next = None
         self.y_min_next = None
-        self.max_distant = math.sqrt(
-            self.road_length**2 + (self.road_num * self.road_width) ** 2
-        )
+        self.max_distant = math.sqrt(self.road_length**2 + (self.road_num * self.road_width) ** 2)
         self.surrounding_vehicles = None
 
     def reset(self):
@@ -61,15 +57,15 @@ class RoadEnv(object):
                 "car_width": self.road_width / 3 * 2,
             },
             "2": {
-                "x": self.surrounding_vehicle_position ,
-                "y": self.road_width / 2*3,
+                "x": self.surrounding_vehicle_position,
+                "y": self.road_width / 2 * 3,
                 "phi": 0,
                 "v": self.surrounding_velocity,
                 "car_length": 5,
                 "car_width": self.road_width / 3 * 2,
             },
             "3": {
-                "x": self.surrounding_vehicle_position / 5 *0,
+                "x": self.surrounding_vehicle_position / 5 * 0,
                 "y": self.road_width / 2 * 5,
                 "phi": 0,
                 "v": self.surrounding_velocity,
@@ -94,9 +90,7 @@ class RoadEnv(object):
             },
         }  # surrounding vehicles
         self.road_curvature = 0  # 曲率
-        self.road_gradient = self.road_gradient_fun(
-            [self.ego_x_initial, self.ego_y_initial]
-        )[0]
+        self.road_gradient = self.road_gradient_fun([self.ego_x_initial, self.ego_y_initial])[0]
         # update theta
         self.vehicle.update_theta(math.radians(self.road_gradient))
         self.vehicle_obs = self.vehicle.reset(
@@ -134,23 +128,17 @@ class RoadEnv(object):
 
         # update road gradient
         try:
-            self.road_gradient = self.road_gradient_fun(
-                [self.vehicle_obs["x_next"], self.vehicle_obs["y_next"]]
-            )[0]
+            self.road_gradient = self.road_gradient_fun([self.vehicle_obs["x_next"], self.vehicle_obs["y_next"]])[0]
         except:
-            print(
-                "out of road and x:", self.vehicle_obs["x_next"], "y:", self.vehicle_obs["y_next"]
-            )
+            print("out of road and x:", self.vehicle_obs["x_next"], "y:", self.vehicle_obs["y_next"])
 
         # update theta
         self.vehicle.update_theta(math.radians(self.road_gradient))
         next_vehicle_obs, reward_ego, done_ego, info = self.vehicle.step(action)
-        next_surrounding_vehicles = dynamic_surrounding_vehicle(
-            self.surrounding_vehicles, self.vehicle.delta_t
-        )
+        next_surrounding_vehicles = dynamic_surrounding_vehicle(self.surrounding_vehicles, self.vehicle.delta_t)
         self.surrounding_vehicles = next_surrounding_vehicles
 
-        self.dmin_next,self.x_min_next,self.y_min_next = e_s_distance(
+        self.dmin_next, self.x_min_next, self.y_min_next = e_s_distance(
             [
                 next_vehicle_obs["x_next"],
                 next_vehicle_obs["y_next"],
@@ -229,9 +217,7 @@ class RoadEnv(object):
             self.vehicle.car_width,
         ]
         car_box = coordination(ego_parmeters)
-        rectangle_ego = Polygon(
-            car_box, closed=True, edgecolor="red", linewidth=2, facecolor="none"
-        )
+        rectangle_ego = Polygon(car_box, closed=True, edgecolor="red", linewidth=2, facecolor="none")
 
         for key, value in self.surrounding_vehicles.items():
             surrounding_vehicle_parmeters = [

@@ -73,15 +73,24 @@ class PPOContinuous:
         # 动作是正态分布
         old_log_probs = action_dists.log_prob(actions)
 
-        for _ in range((states.size()[0]) // 100+1):
-            mu, std = self.actor(states)
+        update_size = 128
+        for step in range(states.size(0) // update_size + 1):
+            mu, std = self.actor(states[step * update_size : (step + 1) * update_size])
             action_dists = torch.distributions.Normal(mu, std)
-            log_probs = action_dists.log_prob(actions)
-            ratio = torch.exp(log_probs - old_log_probs)
-            surr1 = ratio * advantage
-            surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantage
+            log_probs = action_dists.log_prob(actions[step * update_size : (step + 1) * update_size])
+            ratio = torch.exp(log_probs - old_log_probs[step * update_size : (step + 1) * update_size])
+            surr1 = ratio * advantage[step * update_size : (step + 1) * update_size]
+            surr2 = (
+                torch.clamp(ratio, 1 - self.eps, 1 + self.eps)
+                * advantage[step * update_size : (step + 1) * update_size]
+            )
             actor_loss = torch.mean(-torch.min(surr1, surr2))
-            critic_loss = torch.mean(F.mse_loss(self.critic(states), td_target.detach()))
+            critic_loss = torch.mean(
+                F.mse_loss(
+                    self.critic(states[step * update_size : (step + 1) * update_size]),
+                    td_target[step * update_size : (step + 1) * update_size].detach(),
+                )
+            )
             self.actor_optimizer.zero_grad()
             self.critic_optimizer.zero_grad()
             actor_loss.backward()
@@ -147,8 +156,7 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                         }
                     )
                 pbar.update(1)
-        torch.save(agent.actor.state_dict(),
-                   "./model/ppo_continuous_%d.pkl" % i)
+        torch.save(agent.actor.state_dict(), "./model/ppo_continuous_%d.pkl" % i)
     return return_list
 
 
@@ -165,7 +173,7 @@ if __name__ == "__main__":
     eps = 0.2
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     torch.manual_seed(4444)
-    state_dim = env.observation_space.shape[0]+30
+    state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]  # 连续动作空间
     agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
 

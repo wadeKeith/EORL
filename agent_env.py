@@ -79,6 +79,7 @@ class AgentEnv(object):
                 0,
                 math.radians(-5),
             ]
+            + [-np.inf] * 30
         )
         self.state_upper = np.array(
             [
@@ -99,6 +100,7 @@ class AgentEnv(object):
                 1,
                 math.radians(5),
             ]
+            + [np.inf] * 30
         )
         self.normlization = {
             "x": self.env.road_length,
@@ -108,7 +110,7 @@ class AgentEnv(object):
             "phi": math.radians(25),
             "omega": math.pi,
             "soc": 1,
-            'theta': math.radians(5),
+            "theta": math.radians(5),
             "x_next": self.env.road_length,
             "y_next": self.env.road_width * self.env.road_num,
             "x_dot_next": 50,
@@ -116,7 +118,7 @@ class AgentEnv(object):
             "phi_next": math.radians(25),
             "omega_next": math.pi,
             "soc_next": 1,
-            'theta_next': math.radians(5),
+            "theta_next": math.radians(5),
         }
         self.observation_space = Box(
             low=self.state_lower,

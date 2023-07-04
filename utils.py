@@ -57,9 +57,7 @@ def minkowskisum(pol1, pol2):
     pol2 = sort_vertices(pol2)
 
     # sort vertices so that is starts with lowest y-value
-    min1, min2 = np.argmin(pol1[:, 1]), np.argmin(
-        pol2[:, 1]
-    )  # index of vertex with min y value
+    min1, min2 = np.argmin(pol1[:, 1]), np.argmin(pol2[:, 1])  # index of vertex with min y value
     pol1 = np.vstack((pol1[:min1], pol1[min1:]))
     pol2 = np.vstack((pol2[:min2], pol2[min2:]))
 
@@ -68,9 +66,7 @@ def minkowskisum(pol1, pol2):
     # iterate through all the vertices
     while i < len(pol1) or j < len(pol2):
         msum.append(pol1[i % l1] + pol2[j % l2])
-        cross = crossprod(
-            (pol1[(i + 1) % l1] - pol1[i % l1]), pol2[(j + 1) % l2] - pol2[j % l2]
-        )
+        cross = crossprod((pol1[(i + 1) % l1] - pol1[i % l1]), pol2[(j + 1) % l2] - pol2[j % l2])
         # using right-hand rule choose the vector with the lower polar angle and iterate this polygon's vertex
         if cross >= 0:
             i += 1
@@ -116,9 +112,7 @@ def __point_to_line_distance(point, line):
 
 def distant_min(polygon1, polygon2):
     # calculate minkowski sum
-    msum = minkowskisum(
-        polygon1, polygon2 * -1
-    )  # 两个多边形的minkowski sum   msum.shape = (n, 2) n为多边形的顶点数
+    msum = minkowskisum(polygon1, polygon2 * -1)  # 两个多边形的minkowski sum   msum.shape = (n, 2) n为多边形的顶点数
     polygon_sum = geometry.Polygon([*msum, msum[0]])
     zero_point = geometry.Point(0, 0)
     if polygon_sum.contains(zero_point):
@@ -165,9 +159,7 @@ def rota_rect(box, phi, x, y):
     # 旋转矩形
     box_matrix = np.array(box) - np.repeat(np.array([[x, y]]), len(box), 0)
     phi = -phi / 180.0 * np.pi
-    rota_matrix = np.array(
-        [[np.cos(phi), -np.sin(phi)], [np.sin(phi), np.cos(phi)]], np.float32
-    )
+    rota_matrix = np.array([[np.cos(phi), -np.sin(phi)], [np.sin(phi), np.cos(phi)]], np.float32)
 
     new_box = box_matrix.dot(rota_matrix) + np.repeat(np.array([[x, y]]), len(box), 0)
     return new_box
@@ -240,9 +232,7 @@ def dynamic_surrounding_vehicle(surounding_car_parmeters, delta_T):
     for key, value in surounding_car_parmeters.items():
         surrounding_vehicle_velocity = value["v"]
         surrounding_vehicle_x = value["x"]
-        next_surrounding_vehicle_x = (
-            surrounding_vehicle_x + surrounding_vehicle_velocity * delta_T
-        )
+        next_surrounding_vehicle_x = surrounding_vehicle_x + surrounding_vehicle_velocity * delta_T
         surrounding_vehicle_parmeters_next = {
             "x": next_surrounding_vehicle_x,
             "y": value["y"],

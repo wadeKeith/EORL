@@ -82,12 +82,8 @@ class VehicleEnv(object):
         self.bat_eff_soc = np.array([0.1, 0.9])
         self.bat_eff_dis = np.array([0.65, 0.9])
         self.bat_eff_cha = np.array([0.9, 0.7])
-        self.battery_eff_dis_1d = interpolate.RegularGridInterpolator(
-            (self.bat_eff_soc,), self.bat_eff_dis
-        )
-        self.battery_eff_cha_1d = interpolate.RegularGridInterpolator(
-            (self.bat_eff_soc,), self.bat_eff_cha
-        )
+        self.battery_eff_dis_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_dis)
+        self.battery_eff_cha_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_cha)
         self.bat_q = 25 * 1000 * 3600  # 电池容量 25kwh
 
         self.theta = None
@@ -141,14 +137,12 @@ class VehicleEnv(object):
     def step(self, action):
         assert isinstance(action, list), "action must be a list"
         # Syetem Dynamics
-        self.x_next = self.x + self.delta_t * (
-            self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi)
-        )
-        self.y_next = self.y + self.delta_t * (
-            self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi)
-        )
+        self.x_next = self.x + self.delta_t * (self.x_dot * math.cos(self.phi) - self.y_dot * math.sin(self.phi))
+        self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
         # 开出道路惩罚
-        done_outofroad = 0 if 0 < self.y_next < self.road_width * self.road_num and 0<self.x_next<self.road_length else 1
+        done_outofroad = (
+            0 if 0 < self.y_next < self.road_width * self.road_num and 0 < self.x_next < self.road_length else 1
+        )
 
         x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         # 速度约束
@@ -160,9 +154,7 @@ class VehicleEnv(object):
         else:
             action[0] = 0
             done_overacceration = 1
-        self.x_dot_next = self.x_dot + self.delta_t * (
-            action[0] + self.y_dot * self.omega
-        )
+        self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         # 到终点的奖励
         if self.x_next == self.road_length:
             done_arrive = 1
@@ -264,23 +256,16 @@ class VehicleEnv(object):
         self.soc = self.soc_next
         self.theta = self.theta_next
 
-
-        if (
-            done_outofroad
-            or done_overacceration
-            or done_motor_cant_provide
-            or done_arrive
-        ):
+        if done_outofroad or done_overacceration or done_motor_cant_provide or done_arrive:
             done = 1
             info = {}
         else:
             done = 0
             info = {}
         reward = (
-            (1
-            -(self.x_dot_next-30)**2/30**2)*2
-             -(self.y_next-self.road_width*self.road_num/2)**2/(self.road_width*self.road_num/2)**2/6
-            - pb / (self.max_torque / self.r_w*50)
+            (1 - (self.x_dot_next - 30) ** 2 / 30**2) * 2
+            - (self.y_next - self.road_width * self.road_num / 2) ** 2 / (self.road_width * self.road_num / 2) ** 2 / 6
+            - pb / (self.max_torque / self.r_w * 50)
         )
 
         return return_state, reward, done, info
