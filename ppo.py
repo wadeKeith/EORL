@@ -117,6 +117,11 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
     max_return = 0
     for i in range(100):
         with tqdm(total=int(num_episodes / 10), desc="Iteration %d" % i) as pbar:
+            info_display = {'out of road': 0,
+                            'speed illegal': 0,
+                            'motor cant provide': 0,
+                            'arrive': 0,
+                            'collision': 0, }
             for i_episode in range(int(num_episodes / 10)):
                 episode_return = 0
 
@@ -127,7 +132,7 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                     # print("state: ", state)
                     action = agent.take_action(state)
                     # print("action: ", action)
-                    next_state, reward, done, _ = env.step(action)
+                    next_state, reward, done, info = env.step(action)
                     if render_flag:
                         env.render()
                     transition_dict["states"].append(state)
@@ -141,6 +146,17 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
 
                 return_list.append(episode_return)
                 num_ls.append(num)
+                for key,value in info.items():
+                    if key=='out of road' and value == 1:
+                        info_display['out of road'] += 1
+                    elif key=='speed illegal' and value == 1:
+                        info_display['speed illegal'] += 1
+                    elif key=='motor cant provide' and value == 1:
+                        info_display['motor cant provide'] += 1
+                    elif key=='arrive' and value == 1:
+                        info_display['arrive'] += 1
+                    elif key=='collision' and value == 1:
+                        info_display['collision'] += 1
                 # if np.mean(return_list[-10:]) > max_return:
                 #     torch.save(agent.actor.state_dict(),
                 #                "./model/ppo_continuous_%d.pth" % i)
@@ -153,6 +169,7 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                             "episode": "%d" % (num_episodes / 10 * i + i_episode + 1),
                             "return": "%.3f" % np.mean(return_list[-10:]),
                             "num_steps": "%.3f" % np.mean(num_ls[-10:]),
+                            'info': info_display
                         }
                     )
                 pbar.update(1)

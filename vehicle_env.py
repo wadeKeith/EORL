@@ -141,9 +141,8 @@ class VehicleEnv(object):
         self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
         # 开出道路惩罚
         done_outofroad = (
-            0 if 0 < self.y_next < self.road_width * self.road_num and 0 < self.x_next < self.road_length else 1
-        )
-
+            0 if 0 < self.y_next < self.road_width * self.road_num else 1
+        )  # 0表示没有开出道路，1表示开出道路
         x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         # 速度约束
         if 0 < x_dot_next < 50:
@@ -158,10 +157,8 @@ class VehicleEnv(object):
         # 到终点的奖励
         if self.x_next == self.road_length:
             done_arrive = 1
-            reward_arrive = 0
         else:
             done_arrive = 0
-            reward_arrive = 0
         self.y_dot_next = (
             self.m * self.x_dot * self.y_dot
             + self.K * self.omega * self.delta_t
@@ -187,13 +184,13 @@ class VehicleEnv(object):
                 + self.m * self.g * math.sin(self.theta_next)
                 + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
             )
-            done_motor_cant_provide = False
+            done_motor_cant_provide = 0
         elif force < self.min_torque / self.r_w:
             self.force = self.min_torque / self.r_w
-            done_motor_cant_provide = False
+            done_motor_cant_provide = 0
         else:
             self.force = self.max_torque / self.r_w
-            done_motor_cant_provide = True
+            done_motor_cant_provide = 1
         try:
             pb = pb_cal(
                 self.motor_eff_2d,
@@ -258,13 +255,16 @@ class VehicleEnv(object):
 
         if done_outofroad or done_overacceration or done_motor_cant_provide or done_arrive:
             done = 1
-            info = {}
+            info = {'out of road':done_outofroad,
+                    'speed illegal':done_overacceration,
+                    'motor cant provide':done_motor_cant_provide,
+                    'arrive':done_arrive}
         else:
             done = 0
             info = {}
         reward = (
-            (1 - (self.x_dot_next - 30) ** 2 / 30**2) * 2
-            - (self.y_next - self.road_width * self.road_num / 2) ** 2 / (self.road_width * self.road_num / 2) ** 2 / 6
+            (1 - (self.x_dot_next - 30) ** 2 / 30**2)
+            # - (self.y_next - self.road_width * self.road_num / 2) ** 2 / (self.road_width * self.road_num / 2) ** 2 / 6
             - pb / (self.max_torque / self.r_w * 50)
         )
 

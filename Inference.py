@@ -6,15 +6,16 @@ from ppo import PolicyNetContinuous
 env = AgentEnv()
 
 
-hidden_dim = 128
+hidden_dim = 256
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 torch.manual_seed(4444)
+torch.cuda.manual_seed_all(4444)
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]  # 连续动作空间
 
 
 agent_test = PolicyNetContinuous(state_dim, hidden_dim, action_dim).to(device)
-agent_test.load_state_dict(torch.load("./model/ppo_continuous_6.pkl"))
+agent_test.load_state_dict(torch.load("./model/ppo_continuous_5.pkl"))
 agent_test.eval()
 # test
 reward_all = []

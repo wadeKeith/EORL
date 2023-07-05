@@ -6,10 +6,10 @@ from ppo import PPOContinuous, train_on_policy_agent
 have_model = 0
 render_flag = 0
 
-
+seed = 429
 env = AgentEnv()
 
-actor_lr = 8e-5
+actor_lr = 4e-4
 critic_lr = 4e-4
 num_episodes = 5000
 hidden_dim = 256
@@ -18,7 +18,9 @@ lmbda = 0.95
 epochs = 10
 eps = 0.2
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-torch.manual_seed(4444)
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]  # 连续动作空间
 agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)

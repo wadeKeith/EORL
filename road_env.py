@@ -17,7 +17,7 @@ class RoadEnv(object):
         self.surrounding_vehicle_position = 1000
         # parameters for road
         self.road_width = 3.75
-        self.road_length = 10000
+        self.road_length = 5000
         self.road_num = 3
         self.road_gradient_fun = road_curvature_gradient_build(self.road_length, self.road_width, self.road_num)
 
@@ -134,7 +134,7 @@ class RoadEnv(object):
 
         # update theta
         self.vehicle.update_theta(math.radians(self.road_gradient))
-        next_vehicle_obs, reward_ego, done_ego, info = self.vehicle.step(action)
+        next_vehicle_obs, reward_ego, done_ego, info_ego = self.vehicle.step(action)
         next_surrounding_vehicles = dynamic_surrounding_vehicle(self.surrounding_vehicles, self.vehicle.delta_t)
         self.surrounding_vehicles = next_surrounding_vehicles
 
@@ -160,15 +160,16 @@ class RoadEnv(object):
         self.vehicle_obs = next_vehicle_obs
         if min(self.dmin_next) <= 0:
             done_road = 1
-            info = {}
         else:
             done_road = 0
-            info = {}
         reward = reward_ego
         if done_ego or done_road:
             done = 1
+            info_ego['collision'] = done_road
+            info = info_ego
         else:
             done = 0
+            info = {}
         return next_vehicle_obs, reward, done, info
 
     def render(self):
