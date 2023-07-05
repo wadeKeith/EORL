@@ -1,9 +1,15 @@
 import torch
+import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
 import torch.nn.functional as F
 import os
 from agent_env import AgentEnv
+
+
+def orthogonal_init(layer, gain=1.0):
+    nn.init.orthogonal_(layer.weight, gain=gain)
+    nn.init.constant_(layer.bias, 0)
 
 
 class PolicyNetContinuous(torch.nn.Module):
@@ -13,6 +19,11 @@ class PolicyNetContinuous(torch.nn.Module):
         self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
         self.fc_mu = torch.nn.Linear(hidden_dim, action_dim)
         self.fc_std = torch.nn.Linear(hidden_dim, action_dim)
+
+        print("------use_orthogonal_init------")
+        orthogonal_init(self.fc1)
+        orthogonal_init(self.fc2)
+        orthogonal_init(self.fc_mu, gain=0.01)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -28,6 +39,9 @@ class ValueNet(torch.nn.Module):
         self.fc1 = torch.nn.Linear(state_dim, hidden_dim)
         self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = torch.nn.Linear(hidden_dim, 1)
+        orthogonal_init(self.fc1)
+        orthogonal_init(self.fc2)
+        orthogonal_init(self.fc3)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -41,8 +55,8 @@ class PPOContinuous:
     def __init__(self, state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device):
         self.actor = PolicyNetContinuous(state_dim, hidden_dim, action_dim).to(device)
         self.critic = ValueNet(state_dim, hidden_dim).to(device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr, eps=1e-5)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr, eps=1e-5)
         self.gamma = gamma
         self.lmbda = lmbda
         self.epochs = epochs
@@ -73,7 +87,7 @@ class PPOContinuous:
         # 动作是正态分布
         old_log_probs = action_dists.log_prob(actions)
 
-        for _ in range((states.size()[0]) // 100+1):
+        for _ in range((states.size()[0]) // 100 + 1):
             mu, std = self.actor(states)
             action_dists = torch.distributions.Normal(mu, std)
             log_probs = action_dists.log_prob(actions)
@@ -147,8 +161,7 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                         }
                     )
                 pbar.update(1)
-        torch.save(agent.actor.state_dict(),
-                   "./model/ppo_continuous_%d.pkl" % i)
+        torch.save(agent.actor.state_dict(), "./model/ppo_continuous_%d.pkl" % i)
     return return_list
 
 
@@ -165,7 +178,7 @@ if __name__ == "__main__":
     eps = 0.2
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     torch.manual_seed(4444)
-    state_dim = env.observation_space.shape[0]+30
+    state_dim = env.observation_space.shape[0] + 30
     action_dim = env.action_space.shape[0]  # 连续动作空间
     agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
 

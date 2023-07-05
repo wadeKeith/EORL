@@ -18,8 +18,8 @@ lmbda = 0.95
 epochs = 10
 eps = 0.2
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-torch.manual_seed(4444)
-state_dim = env.observation_space.shape[0]+30
+torch.manual_seed(444)
+state_dim = env.observation_space.shape[0] + 30
 action_dim = env.action_space.shape[0]  # 连续动作空间
 agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
 
@@ -27,4 +27,3 @@ if have_model:
     agent.actor.load_state_dict(torch.load("E:\Github\EORL\ppo_continuous_base1.pkl"))
 # train
 return_list = train_on_policy_agent(env, agent, num_episodes, render_flag)
-
