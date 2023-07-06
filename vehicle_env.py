@@ -155,7 +155,7 @@ class VehicleEnv(object):
             done_overacceration = 1
         self.x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         # 到终点的奖励
-        if self.x_next == self.road_length:
+        if self.x_next >= self.road_length:
             done_arrive = 1
         else:
             done_arrive = 0
@@ -263,9 +263,9 @@ class VehicleEnv(object):
             done = 0
             info = {}
         reward = (
-            (1 - (self.x_dot_next - 30) ** 2 / 30**2)
-            # - (self.y_next - self.road_width * self.road_num / 2) ** 2 / (self.road_width * self.road_num / 2) ** 2 / 6
-            - pb / (self.max_torque / self.r_w * 50)
+            (1 - (self.x_dot_next - 30) ** 2 / 30**2)*2
+            - (self.y_next - self.road_width * self.road_num / 2) ** 2 / (self.road_width * self.road_num / 2) ** 2 / 6
+            - pb*self.delta_t / self.bat_q
         )
 
         return return_state, reward, done, info

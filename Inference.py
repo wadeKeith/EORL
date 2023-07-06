@@ -5,11 +5,12 @@ from ppo import PolicyNetContinuous
 
 env = AgentEnv()
 
-
-hidden_dim = 256
+seed = 4443
+hidden_dim = 128
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-torch.manual_seed(4444)
-torch.cuda.manual_seed_all(4444)
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]  # 连续动作空间
 

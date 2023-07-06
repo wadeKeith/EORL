@@ -73,24 +73,16 @@ class PPOContinuous:
         # 动作是正态分布
         old_log_probs = action_dists.log_prob(actions)
 
-        update_size = 128
-        for step in range(states.size(0) // update_size + 1):
-            mu, std = self.actor(states[step * update_size : (step + 1) * update_size])
+        updata_size = 128
+        for _ in range((states.size()[0]) // updata_size + 1):
+            mu, std = self.actor(states)
             action_dists = torch.distributions.Normal(mu, std)
-            log_probs = action_dists.log_prob(actions[step * update_size : (step + 1) * update_size])
-            ratio = torch.exp(log_probs - old_log_probs[step * update_size : (step + 1) * update_size])
-            surr1 = ratio * advantage[step * update_size : (step + 1) * update_size]
-            surr2 = (
-                torch.clamp(ratio, 1 - self.eps, 1 + self.eps)
-                * advantage[step * update_size : (step + 1) * update_size]
-            )
+            log_probs = action_dists.log_prob(actions)
+            ratio = torch.exp(log_probs - old_log_probs)
+            surr1 = ratio * advantage
+            surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantage
             actor_loss = torch.mean(-torch.min(surr1, surr2))
-            critic_loss = torch.mean(
-                F.mse_loss(
-                    self.critic(states[step * update_size : (step + 1) * update_size]),
-                    td_target[step * update_size : (step + 1) * update_size].detach(),
-                )
-            )
+            critic_loss = torch.mean(F.mse_loss(self.critic(states), td_target.detach()))
             self.actor_optimizer.zero_grad()
             self.critic_optimizer.zero_grad()
             actor_loss.backward()
