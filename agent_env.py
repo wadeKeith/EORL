@@ -2,33 +2,57 @@ import numpy as np
 from gymnasium.spaces import Box
 import math
 from road_env import RoadEnv
+from utils import Normalization, RewardScaling
 
 
-def dictobs2listobs(obs, upper):
-    list_obs = []
-    for key in obs.keys():
-        if key == "dmin":
-            [list_obs.append(i / 1000) for i in obs[key]]
-        elif key == "x_min":
-            [list_obs.append(i / obs["dmin"][obs[key].index(i)]) for i in obs[key]]
-        elif key == "y_min":
-            [list_obs.append(i / obs["dmin"][obs[key].index(i)]) for i in obs[key]]
-        elif key == "dmin_next":
-            [list_obs.append(i / 1000) for i in obs[key]]
-        elif key == "x_min_next":
-            [list_obs.append(i / obs["dmin_next"][obs[key].index(i)]) for i in obs[key]]
-        elif key == "y_min_next":
-            [list_obs.append(i / obs["dmin_next"][obs[key].index(i)]) for i in obs[key]]
-        else:
-            list_obs.append(obs[key] / upper[key])
-    return list_obs
+# def dictobs2listobs(obs, upper):
+#     list_obs = []
+#     for key in obs.keys():
+#         if key == "dmin":
+#             [list_obs.append(i / 1000) for i in obs[key]]
+#         elif key == "x_min":
+#             [list_obs.append(i / obs["dmin"][obs[key].index(i)]) for i in obs[key]]
+#         elif key == "y_min":
+#             [list_obs.append(i / obs["dmin"][obs[key].index(i)]) for i in obs[key]]
+#         elif key == "dmin_next":
+#             [list_obs.append(i / 1000) for i in obs[key]]
+#         elif key == "x_min_next":
+#             [list_obs.append(i / obs["dmin_next"][obs[key].index(i)]) for i in obs[key]]
+#         elif key == "y_min_next":
+#             [list_obs.append(i / obs["dmin_next"][obs[key].index(i)]) for i in obs[key]]
+#         else:
+#             list_obs.append(obs[key] / upper[key])
+#     return list_obs
 
 
 # def normalize_obs(obs, state_upper):
 #     new_obs = dictobs2listobs(obs)
 #     final_obs = [new_obs[i] / state_upper[i] for i in range(len(new_obs))]
 #     return final_obs
-
+def dictobs2listobs(obs):
+    list_obs = []
+    for key in obs.keys():
+        if key == "dmin":
+            for i in obs[key]:
+                list_obs.append(i)
+        elif key == "x_min":
+            for i in obs[key]:
+                list_obs.append(i)
+        elif key == "y_min":
+            for i in obs[key]:
+                list_obs.append(i)
+        elif key == "dmin_next":
+            for i in obs[key]:
+                list_obs.append(i)
+        elif key == "x_min_next":
+            for i in obs[key]:
+                list_obs.append(i)
+        elif key == "y_min_next":
+            for i in obs[key]:
+                list_obs.append(i)
+        else:
+            list_obs.append(obs[key])
+    return list_obs
 
 def map_action(action, action_space):
     if action[0] <= 0 and action[1] <= 0:
@@ -102,24 +126,6 @@ class AgentEnv(object):
             ]
             + [np.inf] * 30
         )
-        self.normlization = {
-            "x": self.env.road_length,
-            "y": self.env.road_width * self.env.road_num,
-            "x_dot": 50,
-            "y_dot": 1,
-            "phi": math.radians(25),
-            "omega": math.pi,
-            "soc": 1,
-            "theta": math.radians(5),
-            "x_next": self.env.road_length,
-            "y_next": self.env.road_width * self.env.road_num,
-            "x_dot_next": 50,
-            "y_dot_next": 1,
-            "phi_next": math.radians(25),
-            "omega_next": math.pi,
-            "soc_next": 1,
-            "theta_next": math.radians(5),
-        }
         self.observation_space = Box(
             low=self.state_lower,
             high=self.state_upper,
@@ -131,10 +137,11 @@ class AgentEnv(object):
             high=np.array([1.5, math.radians(5)]),
             dtype=np.float32,
         )
-
+        self.state_norm = Normalization(self.observation_space.shape[0])
     def reset(self):
         obs = self.env.reset()
-        return dictobs2listobs(obs, self.normlization)
+        obs = dictobs2listobs(obs)
+        return self.state_norm(obs)
 
     def step(self, action):
         action = map_action(action, self.action_space)
@@ -143,7 +150,8 @@ class AgentEnv(object):
         # print(next_obs['x_dot'])
         # print(next_obs['x'])
         # print(reward)
-        return dictobs2listobs(next_obs, self.normlization), reward, done, info
+        next_obs = dictobs2listobs(next_obs)
+        return self.state_norm(next_obs), reward, done, info
 
     def render(self):
         self.env.render()

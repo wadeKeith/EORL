@@ -38,16 +38,19 @@ class ValueNet(torch.nn.Module):
 class PPOContinuous:
     """处理连续动作的PPO算法"""
 
-    def __init__(self, state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device):
+    def __init__(self, state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device,entropy_coef):
         self.actor = PolicyNetContinuous(state_dim, hidden_dim, action_dim).to(device)
         self.critic = ValueNet(state_dim, hidden_dim).to(device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
+        self.lr_a =actor_lr
+        self.lr_c = critic_lr
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr, eps=1e-5)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr,eps=1e-5)
         self.gamma = gamma
         self.lmbda = lmbda
         self.epochs = epochs
         self.eps = eps
         self.device = device
+        self.entropy_coef = entropy_coef
 
     def take_action(self, state):
         state = torch.tensor([state], dtype=torch.float).to(self.device)
@@ -77,18 +80,26 @@ class PPOContinuous:
         for _ in range((states.size()[0]) // updata_size + 1):
             mu, std = self.actor(states)
             action_dists = torch.distributions.Normal(mu, std)
+            dist_entropy = action_dists.entropy().sum(1, keepdim=True)  # 计算熵
             log_probs = action_dists.log_prob(actions)
             ratio = torch.exp(log_probs - old_log_probs)
             surr1 = ratio * advantage
             surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantage
-            actor_loss = torch.mean(-torch.min(surr1, surr2))
+            actor_loss = -torch.min(surr1, surr2)- self.entropy_coef * dist_entropy # 计算actor的损失加入了熵
             critic_loss = torch.mean(F.mse_loss(self.critic(states), td_target.detach()))
             self.actor_optimizer.zero_grad()
             self.critic_optimizer.zero_grad()
-            actor_loss.backward()
+            actor_loss.mean().backward()
             critic_loss.backward()
             self.actor_optimizer.step()
             self.critic_optimizer.step()
+    def lr_decay(self, total_steps):
+        lr_a_now = self.lr_a * (1 - total_steps / self.epochs)
+        lr_c_now = self.lr_c * (1 - total_steps / self.epochs)
+        for p in self.actor_optimizer.param_groups:
+            p['lr'] = lr_a_now
+        for p in self.critic_optimizer.param_groups:
+            p['lr'] = lr_c_now
 
 
 def compute_advantage(gamma, lmbda, td_delta):
@@ -99,7 +110,9 @@ def compute_advantage(gamma, lmbda, td_delta):
         advantage = gamma * lmbda * advantage + delta
         advantage_list.append(advantage)
     advantage_list.reverse()
-    return torch.tensor(advantage_list, dtype=torch.float)
+    adv = torch.tensor(advantage_list, dtype=torch.float).view(-1, 1)
+    # adv = ((adv - adv.mean()) / (adv.std() + 1e-5))
+    return adv
 
 
 def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
@@ -108,6 +121,7 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
     transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
     max_return = 0
     for i in range(100):
+        agent.lr_decay(i)
         with tqdm(total=int(num_episodes / 10), desc="Iteration %d" % i) as pbar:
             info_display = {'out of road': 0,
                             'speed illegal': 0,
@@ -161,6 +175,7 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                             "episode": "%d" % (num_episodes / 10 * i + i_episode + 1),
                             "return": "%.3f" % np.mean(return_list[-10:]),
                             "num_steps": "%.3f" % np.mean(num_ls[-10:]),
+                            'learning rate': agent.actor_optimizer.param_groups[0]['lr'],
                             'info': info_display
                         }
                     )
@@ -168,25 +183,3 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
         torch.save(agent.actor.state_dict(), "./model/ppo_continuous_%d.pkl" % i)
     return return_list
 
-
-if __name__ == "__main__":
-    env = AgentEnv()
-
-    actor_lr = 1e-4
-    critic_lr = 5e-4
-    num_episodes = 2000
-    hidden_dim = 128
-    gamma = 0.9999
-    lmbda = 0.95
-    epochs = 10
-    eps = 0.2
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    torch.manual_seed(4444)
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0]  # 连续动作空间
-    agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
-
-    # train
-    return_list = train_on_policy_agent(env, agent, num_episodes)
-    # save model
-    torch.save(agent.actor.state_dict(), "ppo_continuous_actor.pth")

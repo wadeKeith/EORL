@@ -3,6 +3,7 @@ import numpy as np
 from agent_env import AgentEnv
 from ppo import PolicyNetContinuous
 
+
 env = AgentEnv()
 
 seed = 4443
@@ -16,7 +17,7 @@ action_dim = env.action_space.shape[0]  # 连续动作空间
 
 
 agent_test = PolicyNetContinuous(state_dim, hidden_dim, action_dim).to(device)
-agent_test.load_state_dict(torch.load("./model/ppo_continuous_5.pkl"))
+agent_test.load_state_dict(torch.load("./model/ppo_continuous_4.pkl"))
 agent_test.eval()
 # test
 reward_all = []
@@ -35,7 +36,7 @@ while not done:
     # print(action)
     next_obs, reward, done, info = env.step(action)
     reward_ls.append(reward)
-    env.render()
+    # env.render()
     state = next_obs
     num += 1
 

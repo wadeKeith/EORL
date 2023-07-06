@@ -3,11 +3,11 @@ import torch
 from agent_env import AgentEnv
 from ppo import PPOContinuous, train_on_policy_agent
 
-have_model = 1
+have_model = 0
 render_flag = 0
 
 seed = 4443
-env = AgentEnv()
+
 
 actor_lr = 8e-5
 critic_lr = 4e-4
@@ -15,15 +15,19 @@ num_episodes = 5000
 hidden_dim = 128
 gamma = 0.9999
 lmbda = 0.95
-epochs = 10
+epochs = 100
 eps = 0.2
+entropy_coef = 0.01
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+env = AgentEnv()
+
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]  # 连续动作空间
-agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device)
+agent = PPOContinuous(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device, entropy_coef)
 
 if have_model:
     agent.actor.load_state_dict(torch.load("E:\Github\EORL\ppo_continuous_base.pkl"))

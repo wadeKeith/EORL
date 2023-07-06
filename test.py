@@ -1,19 +1,43 @@
-import math
-import numpy as np
-import matplotlib.pyplot as plt
-'''a = math.exp(-1)
-x = np.linspace(0,50,100)
-y = np.exp(-abs(x-30)/10)
-plt.figure(0)
-plt.plot(x,y)
-plt.show()
-print(a)'''
+from normalization import Normalization, RewardScaling
 
-# x = np.linspace(0,50,100)
-# y = 1-(x-30)**2/(30)**2
-x = np.linspace(0,3.75*3,100)
-y = -(x-3.75*3/2)**2/(3.75*3/2)**2/6
+from road_env import RoadEnv
 
-plt.figure(0)
-plt.plot(x,y)
-plt.show()
+def dictobs2listobs(obs):
+    list_obs = []
+    for key in obs.keys():
+        if key == "dmin":
+            for i in obs[key]:
+                list_obs.append(i)
+        elif key == "x_min":
+            for i in obs[key]:
+                list_obs.append(i)
+        elif key == "y_min":
+            for i in obs[key]:
+                list_obs.append(i)
+        elif key == "dmin_next":
+            for i in obs[key]:
+                list_obs.append(i)
+        elif key == "x_min_next":
+            for i in obs[key]:
+                list_obs.append(i)
+        elif key == "y_min_next":
+            for i in obs[key]:
+                list_obs.append(i)
+        else:
+            list_obs.append(obs[key])
+    return list_obs
+
+env = RoadEnv()
+state = env.reset()
+state = dictobs2listobs(state)
+state_norm = Normalization(16+30)
+state = state_norm(state)
+print(state)
+done = False
+while not done:
+    next_obs, reward, done, info = env.step([1,0])
+    next_obs = dictobs2listobs(next_obs)
+    next_obs = state_norm(next_obs)
+    print(next_obs)
+
+
