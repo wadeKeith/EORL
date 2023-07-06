@@ -138,10 +138,11 @@ class AgentEnv(object):
             dtype=np.float32,
         )
         self.state_norm = Normalization(self.observation_space.shape[0])
+        self.state_norm_flag = True
     def reset(self):
         obs = self.env.reset()
         obs = dictobs2listobs(obs)
-        return self.state_norm(obs)
+        return self.state_norm(obs,update=self.state_norm_flag)
 
     def step(self, action):
         action = map_action(action, self.action_space)
@@ -151,7 +152,7 @@ class AgentEnv(object):
         # print(next_obs['x'])
         # print(reward)
         next_obs = dictobs2listobs(next_obs)
-        return self.state_norm(next_obs), reward, done, info
+        return self.state_norm(next_obs,update=self.state_norm_flag), reward, done, info
 
     def render(self):
         self.env.render()

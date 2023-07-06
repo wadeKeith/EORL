@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-
+import pickle
 
 def plot_list(list_data, plt_name):
     plt.plot(list_data)
@@ -296,6 +296,20 @@ class RewardScaling:
 
     def reset(self):  # When an episode is done,we should reset 'self.R'
         self.R = np.zeros(self.shape)
+
+
+def saveclass(obj,name):
+    f = open(name, 'wb')
+    pickle.dump(obj, f, -1)
+    f.close()
+
+
+def loadclass(name):
+    f = open(name, 'rb')
+    retclass = pickle.load(f)
+    f.close()
+    return retclass
+
 
 
 if __name__ == "__main__":

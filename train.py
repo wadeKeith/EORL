@@ -9,8 +9,8 @@ render_flag = 0
 seed = 4443
 
 
-actor_lr = 8e-5
-critic_lr = 4e-4
+actor_lr = 6e-5
+critic_lr = 2e-4
 num_episodes = 5000
 hidden_dim = 128
 gamma = 0.9999

@@ -4,7 +4,7 @@ from tqdm import tqdm
 import torch.nn.functional as F
 import os
 from agent_env import AgentEnv
-
+from utils import saveclass
 
 class PolicyNetContinuous(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim):
@@ -180,6 +180,7 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                         }
                     )
                 pbar.update(1)
+        saveclass(env.state_norm, './model/text_file/state_norm_%d' % i)
         torch.save(agent.actor.state_dict(), "./model/ppo_continuous_%d.pkl" % i)
     return return_list
 
