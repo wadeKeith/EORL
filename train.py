@@ -9,15 +9,15 @@ render_flag = 0
 seed = 4443
 
 
-actor_lr = 6e-5
-critic_lr = 2e-4
+actor_lr = 1e-4
+critic_lr = 1e-3
 num_episodes = 5000
 hidden_dim = 128
 gamma = 0.9999
 lmbda = 0.95
 epochs = 100
 eps = 0.2
-entropy_coef = 0.01
+entropy_coef = 0.001
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 env = AgentEnv()

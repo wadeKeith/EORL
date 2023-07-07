@@ -6,6 +6,32 @@ import os
 from agent_env import AgentEnv
 from utils import saveclass
 
+
+def evluation_policy(env, hidden_dim, device, model_num):
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.shape[0]  # 连续动作空间
+    agent_test = PolicyNetContinuous(state_dim, hidden_dim, action_dim).to(device)
+    agent_test.load_state_dict(torch.load("./model/ppo_continuous_%d.pkl" % model_num))
+    agent_test.eval()
+
+    state = env.reset()
+    done = False
+    reward_ls = []
+    num = 1
+    while not done:
+        state = torch.tensor(state, dtype=torch.float).to(device)
+        action, _ = agent_test(state)
+        action = action.clamp(-1.0, 1.0)
+        action = action.cpu().detach().numpy().tolist()
+        next_obs, reward, done, info = env.step(action)
+        reward_ls.append(reward)
+        # env.render()
+        state = next_obs
+        num += 1
+
+    print("reward: ", np.sum(reward_ls), "num: ", num)
+
+
 class PolicyNetContinuous(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim):
         super(PolicyNetContinuous, self).__init__()
@@ -38,19 +64,37 @@ class ValueNet(torch.nn.Module):
 class PPOContinuous:
     """处理连续动作的PPO算法"""
 
-    def __init__(self, state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, epochs, eps, gamma, device,entropy_coef):
+    def __init__(
+        self,
+        state_dim,
+        hidden_dim,
+        action_dim,
+        actor_lr,
+        critic_lr,
+        lmbda,
+        epochs,
+        eps,
+        gamma,
+        device,
+        entropy_coef,
+    ):
         self.actor = PolicyNetContinuous(state_dim, hidden_dim, action_dim).to(device)
         self.critic = ValueNet(state_dim, hidden_dim).to(device)
-        self.lr_a =actor_lr
+        self.lr_a = actor_lr
         self.lr_c = critic_lr
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr, eps=1e-5)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr,eps=1e-5)
+        self.actor_optimizer = torch.optim.Adam(
+            self.actor.parameters(), lr=actor_lr, eps=1e-5
+        )
+        self.critic_optimizer = torch.optim.Adam(
+            self.critic.parameters(), lr=critic_lr, eps=1e-5
+        )
         self.gamma = gamma
         self.lmbda = lmbda
         self.epochs = epochs
         self.eps = eps
         self.device = device
         self.entropy_coef = entropy_coef
+        self.hidden_dim = hidden_dim
 
     def take_action(self, state):
         state = torch.tensor([state], dtype=torch.float).to(self.device)
@@ -62,15 +106,33 @@ class PPOContinuous:
         return action.cpu().numpy().tolist()[0]
 
     def update(self, transition_dict):
-        states = torch.tensor(transition_dict["states"], dtype=torch.float).to(self.device)
-        actions = torch.tensor(transition_dict["actions"], dtype=torch.float).view(-1, 2).to(self.device)
-        rewards = torch.tensor(transition_dict["rewards"], dtype=torch.float).view(-1, 1).to(self.device)
-        next_states = torch.tensor(transition_dict["next_states"], dtype=torch.float).to(self.device)
-        dones = torch.tensor(transition_dict["dones"], dtype=torch.float).view(-1, 1).to(self.device)
+        states = torch.tensor(transition_dict["states"], dtype=torch.float).to(
+            self.device
+        )
+        actions = (
+            torch.tensor(transition_dict["actions"], dtype=torch.float)
+            .view(-1, 2)
+            .to(self.device)
+        )
+        rewards = (
+            torch.tensor(transition_dict["rewards"], dtype=torch.float)
+            .view(-1, 1)
+            .to(self.device)
+        )
+        next_states = torch.tensor(
+            transition_dict["next_states"], dtype=torch.float
+        ).to(self.device)
+        dones = (
+            torch.tensor(transition_dict["dones"], dtype=torch.float)
+            .view(-1, 1)
+            .to(self.device)
+        )
         rewards = rewards  # 和TRPO一样,对奖励进行修改,方便训练
         td_target = rewards + self.gamma * self.critic(next_states) * (1 - dones)
         td_delta = td_target - self.critic(states)
-        advantage = compute_advantage(self.gamma, self.lmbda, td_delta.cpu()).to(self.device)
+        advantage = compute_advantage(self.gamma, self.lmbda, td_delta.cpu()).to(
+            self.device
+        )
         mu, std = self.actor(states)
         action_dists = torch.distributions.Normal(mu.detach(), std.detach())
         # 动作是正态分布
@@ -85,21 +147,26 @@ class PPOContinuous:
             ratio = torch.exp(log_probs - old_log_probs)
             surr1 = ratio * advantage
             surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantage
-            actor_loss = -torch.min(surr1, surr2)- self.entropy_coef * dist_entropy # 计算actor的损失加入了熵
-            critic_loss = torch.mean(F.mse_loss(self.critic(states), td_target.detach()))
+            actor_loss = (
+                -torch.min(surr1, surr2) - self.entropy_coef * dist_entropy
+            )  # 计算actor的损失加入了熵
+            critic_loss = torch.mean(
+                F.mse_loss(self.critic(states), td_target.detach())
+            )
             self.actor_optimizer.zero_grad()
             self.critic_optimizer.zero_grad()
             actor_loss.mean().backward()
             critic_loss.backward()
             self.actor_optimizer.step()
             self.critic_optimizer.step()
+
     def lr_decay(self, total_steps):
         lr_a_now = self.lr_a * (1 - total_steps / self.epochs)
         lr_c_now = self.lr_c * (1 - total_steps / self.epochs)
         for p in self.actor_optimizer.param_groups:
-            p['lr'] = lr_a_now
+            p["lr"] = lr_a_now
         for p in self.critic_optimizer.param_groups:
-            p['lr'] = lr_c_now
+            p["lr"] = lr_c_now
 
 
 def compute_advantage(gamma, lmbda, td_delta):
@@ -118,16 +185,24 @@ def compute_advantage(gamma, lmbda, td_delta):
 def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
     return_list = []
     num_ls = []
-    transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
+    transition_dict = {
+        "states": [],
+        "actions": [],
+        "next_states": [],
+        "rewards": [],
+        "dones": [],
+    }
     max_return = 0
     for i in range(100):
         agent.lr_decay(i)
         with tqdm(total=int(num_episodes / 10), desc="Iteration %d" % i) as pbar:
-            info_display = {'out of road': 0,
-                            'speed illegal': 0,
-                            'motor cant provide': 0,
-                            'arrive': 0,
-                            'collision': 0, }
+            info_display = {
+                "out of road": 0,
+                "speed illegal": 0,
+                "motor cant provide": 0,
+                "arrive": 0,
+                "collision": 0,
+            }
             for i_episode in range(int(num_episodes / 10)):
                 episode_return = 0
 
@@ -152,35 +227,43 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
 
                 return_list.append(episode_return)
                 num_ls.append(num)
-                for key,value in info.items():
-                    if key=='out of road' and value == 1:
-                        info_display['out of road'] += 1
-                    elif key=='speed illegal' and value == 1:
-                        info_display['speed illegal'] += 1
-                    elif key=='motor cant provide' and value == 1:
-                        info_display['motor cant provide'] += 1
-                    elif key=='arrive' and value == 1:
-                        info_display['arrive'] += 1
-                    elif key=='collision' and value == 1:
-                        info_display['collision'] += 1
+                for key, value in info.items():
+                    if key == "out of road" and value == 1:
+                        info_display["out of road"] += 1
+                    elif key == "speed illegal" and value == 1:
+                        info_display["speed illegal"] += 1
+                    elif key == "motor cant provide" and value == 1:
+                        info_display["motor cant provide"] += 1
+                    elif key == "arrive" and value == 1:
+                        info_display["arrive"] += 1
+                    elif key == "collision" and value == 1:
+                        info_display["collision"] += 1
                 # if np.mean(return_list[-10:]) > max_return:
                 #     torch.save(agent.actor.state_dict(),
                 #                "./model/ppo_continuous_%d.pth" % i)
                 #     max_return = np.mean(return_list[-10:])
                 agent.update(transition_dict)
-                transition_dict = {"states": [], "actions": [], "next_states": [], "rewards": [], "dones": []}
+                transition_dict = {
+                    "states": [],
+                    "actions": [],
+                    "next_states": [],
+                    "rewards": [],
+                    "dones": [],
+                }
                 if (i_episode + 1) % 10 == 0:
                     pbar.set_postfix(
                         {
                             "episode": "%d" % (num_episodes / 10 * i + i_episode + 1),
                             "return": "%.3f" % np.mean(return_list[-10:]),
                             "num_steps": "%.3f" % np.mean(num_ls[-10:]),
-                            'learning rate': agent.actor_optimizer.param_groups[0]['lr'],
-                            'info': info_display
+                            "learning rate": agent.actor_optimizer.param_groups[0][
+                                "lr"
+                            ],
+                            "info": info_display,
                         }
                     )
                 pbar.update(1)
-        saveclass(env.state_norm, './model/text_file/state_norm_%d' % i)
+        saveclass(env.state_norm, "./model/text_file/state_norm_%d" % i)
         torch.save(agent.actor.state_dict(), "./model/ppo_continuous_%d.pkl" % i)
+        evluation_policy(env, agent.hidden_dim, agent.device, i)
     return return_list
-
