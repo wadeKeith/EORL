@@ -9,7 +9,7 @@ env = AgentEnv()
 
 seed = 4443
 hidden_dim = 128
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps")
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)

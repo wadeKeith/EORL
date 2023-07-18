@@ -18,7 +18,7 @@ lmbda = 0.95
 epochs = 100
 eps = 0.2
 entropy_coef = 0.001
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps")
 
 env = AgentEnv()
 
