@@ -4,3 +4,4 @@
 __pycache__/
 *.pth
 model
+.DS_Store
