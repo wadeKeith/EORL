@@ -176,10 +176,10 @@ def coordination(car_parmeters):
     """
     x, y, phi, car_length, car_width = car_parmeters
     car_box = [
-        [x - car_length / 2, y - car_width / 2],
-        [x + car_length / 2, y - car_width / 2],
-        [x + car_length / 2, y + car_width / 2],
-        [x - car_length / 2, y + car_width / 2],
+        [x - car_length, y - car_width / 2],
+        [x , y - car_width / 2],
+        [x , y + car_width / 2],
+        [x - car_length, y + car_width / 2],
     ]
 
     car_box = rota_rect(car_box, phi, x, y)
