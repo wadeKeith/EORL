@@ -6,10 +6,10 @@ from ppo import PPOContinuous, train_on_policy_agent
 have_model = 0
 render_flag = 0
 
-seed = 1234
+seed = 429
 
 
-actor_lr = 1e-3
+actor_lr = 1e-4
 critic_lr = 1e-3
 num_episodes = 2000
 hidden_dim = 64

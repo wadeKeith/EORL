@@ -33,7 +33,7 @@ class RoadEnv(object):
         self.vehicle_obs = None  # vehicle observation
         self.ego_x_initial = 0
         self.ego_y_initial = self.road_init_width + self.road_width / 2
-        self.ego_x_dot_initial = 20
+        self.ego_x_dot_initial = 15
         self.ego_y_dot_initial = 0
         self.ego_phi_initial = 0
         self.ego_omega_initial = 0

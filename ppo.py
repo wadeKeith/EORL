@@ -39,12 +39,14 @@ class PolicyNetContinuous(torch.nn.Module):
         self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
         self.fc_mu = torch.nn.Linear(hidden_dim, action_dim)
         self.fc_std = torch.nn.Linear(hidden_dim, action_dim)
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps")
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         mu = torch.tanh(self.fc_mu(x))
-        std = F.softplus(self.fc_std(x))+0.001
+        std = F.softplus(self.fc_std(x))
+        std = std+ 1e-8*torch.ones(size=std.shape).to(self.device)
         return mu, std
 
 
@@ -138,7 +140,7 @@ class PPOContinuous:
         # 动作是正态分布
         old_log_probs = action_dists.log_prob(actions)
 
-        updata_size = 128
+        updata_size = 32
         for _ in range((states.size()[0]) // updata_size + 1):
             mu, std = self.actor(states)
             action_dists = torch.distributions.Normal(mu, std)
@@ -263,7 +265,7 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                         }
                     )
                 pbar.update(1)
-        # saveclass(env.state_norm, "./model/state_norm_%d" % i)
+        # saveclass(env.state_norm, "./model/text_file/state_norm_%d" % i)
         torch.save(agent.actor.state_dict(), "./model/ppo_continuous_%d.pkl" % i)
         evluation_policy(env, agent.hidden_dim, agent.device, i)
     return return_list

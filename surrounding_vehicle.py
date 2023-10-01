@@ -23,7 +23,7 @@ class SV_env(object):
         self.surrounding_vehicle_total_time = np.unique(self.surrounding_vehicle_all["Frame_ID"]).shape[0]
         self.surrounding_vehicle_max_num = find_max_num_sv(self.surrounding_vehicle_all)
         self.frames = np.unique(self.surrounding_vehicle_all["Frame_ID"])
-        self.inital_time = 3000
+        self.inital_time = 3500
         self.surrounding_vehicles_lat_min = min(self.surrounding_vehicle_all["Local_X"])
         self.surrounding_vehicles_lat_max = max(self.surrounding_vehicle_all["Local_X"])
         self.surrounding_vehicles_lon_min = 0

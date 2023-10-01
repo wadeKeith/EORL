@@ -29,7 +29,7 @@ from utils import Normalization, RewardScaling
 #     new_obs = dictobs2listobs(obs)
 #     final_obs = [new_obs[i] / state_upper[i] for i in range(len(new_obs))]
 #     return final_obs
-def dictobs2listobs(obs):
+def dictobs2listobs(obs,state_lower,state_upper,observation_space):
     list_obs = []
     list_obs_dmin = []
     list_obs_xmin = []
@@ -64,6 +64,12 @@ def dictobs2listobs(obs):
             obs[key] = np.mean(list_obs_ymin_next)
     for key in obs.keys():
         list_obs.append(obs[key])
+    # assert list_obs in observation_space, "state is not in action space"
+    for i in range(len(list_obs)):
+        if i==1 or i==9:
+            list_obs[i] = (list_obs[i] - state_lower[i]) / (state_upper[i] - state_lower[i])
+        else:
+            list_obs[i] = list_obs[i] / state_upper[i]
     return list_obs
 
 def map_action(action, action_space):
@@ -115,7 +121,7 @@ class AgentEnv(object):
                 0,
                 math.radians(-5),
             ]
-            + [-100]*6 
+            + [0]*6 
         )
         self.state_upper = np.array(
             [
@@ -136,7 +142,7 @@ class AgentEnv(object):
                 1,
                 math.radians(5),
             ]
-            + [100]*6
+            + [self.max_length]*6
         )
         self.observation_space = Box(
             low=self.state_lower,
@@ -149,12 +155,10 @@ class AgentEnv(object):
             high=np.array([1.5, math.radians(5)]),
             dtype=np.float32,
         )
-        self.state_norm = Normalization(self.observation_space.shape[0])
-        self.state_norm_flag = True
     def reset(self):
         obs = self.env.reset()
-        obs = dictobs2listobs(obs)
-        return self.state_norm(obs,update=self.state_norm_flag)
+        obs = dictobs2listobs(obs,self.state_lower, self.state_upper,self.observation_space)
+        return obs
 
     def step(self, action):
         action = map_action(action, self.action_space)
@@ -163,8 +167,8 @@ class AgentEnv(object):
         # print(next_obs['x_dot'])
         # print(next_obs['x'])
         # print(reward)
-        next_obs = dictobs2listobs(next_obs)
-        return self.state_norm(next_obs,update=self.state_norm_flag), reward, done, info
+        next_obs = dictobs2listobs(next_obs,self.state_lower, self.state_upper,self.observation_space)
+        return next_obs, reward, done, info
 
     def render(self):
         self.env.render()
