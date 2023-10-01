@@ -6,7 +6,7 @@ from vehicle_utils import bat_dynamic, pb_cal
 
 
 class VehicleEnv(object):
-    def __init__(self, road_width, road_length, road_num):
+    def __init__(self, road_width, road_length, road_num,road_init_width):
         self.x = None
         self.y = None
         self.x_dot = None
@@ -90,10 +90,11 @@ class VehicleEnv(object):
         self.theta_next = None
 
         self.road_width = road_width
+        self.road_init_width = road_init_width
         self.road_num = road_num
         self.road_length = road_length
         self.car_length = self.a_v + self.b_v
-        self.car_width = self.road_width / 3 * 2
+        self.car_width = 1.95072
 
     def update_theta(self, theta):
         self.theta_next = theta
@@ -141,7 +142,7 @@ class VehicleEnv(object):
         self.y_next = self.y + self.delta_t * (self.x_dot * math.sin(self.phi) + self.y_dot * math.cos(self.phi))
         # 开出道路惩罚
         done_outofroad = (
-            0 if 0 < self.y_next < self.road_width * self.road_num else 1
+            0 if self.road_init_width < self.y_next < self.road_init_width+self.road_width * self.road_num else 1
         )  # 0表示没有开出道路，1表示开出道路
         x_dot_next = self.x_dot + self.delta_t * (action[0] + self.y_dot * self.omega)
         # 速度约束
@@ -264,7 +265,7 @@ class VehicleEnv(object):
             info = {}
         reward = (
             (1 - (self.x_dot_next - 30) ** 2 / 30**2)*2
-            - (self.y_next - self.road_width * self.road_num / 2) ** 2 / (self.road_width * self.road_num / 2) ** 2 / 6
+            +np.cos((2*np.pi/((self.road_width)*2))*(self.y_next-(2*self.road_init_width+self.road_width)/2))
             - pb*self.delta_t / self.bat_q
         )
 

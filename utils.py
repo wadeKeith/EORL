@@ -174,7 +174,7 @@ def coordination(car_parmeters):
     :param car_width: 车辆宽度
     :return: 车辆四个顶点坐标
     """
-    x, y, phi, car_length, car_width = car_parmeters
+    x, y,phi, car_length, car_width = car_parmeters
     car_box = [
         [x - car_length, y - car_width / 2],
         [x , y - car_width / 2],
@@ -186,7 +186,7 @@ def coordination(car_parmeters):
     return car_box
 
 
-def e_s_distance(ego_car_parmeters, surronding_car_parmeters):
+def e_s_distance(ego_car_parmeters, surrounding_vehicles):
     """
 
     Args:
@@ -202,47 +202,28 @@ def e_s_distance(ego_car_parmeters, surronding_car_parmeters):
     x_min = []
     y_min = []
     ego_car_box = coordination(ego_car_parmeters)
-    for key, value in surronding_car_parmeters.items():
+
+    lateralPos = surrounding_vehicles["Local_X"]
+    longitudePos = surrounding_vehicles["Local_Y"]
+    id = surrounding_vehicles["Vehicle_ID"]
+    len = surrounding_vehicles["v_Length"]
+    width = surrounding_vehicles["v_Width"]
+    v_class = surrounding_vehicles["v_Class"]
+    for i in range(0,surrounding_vehicles.shape[0]):
         surrounding_vehicle_parmeters = [
-            value["x"],
-            value["y"],
-            value["phi"],
-            value["car_length"],
-            value["car_width"],
+                longitudePos.values[i],
+                lateralPos.values[i],
+                0,
+                len.values[i],
+                width.values[i],
         ]
-        surronding_car_box = coordination(surrounding_vehicle_parmeters)
-        min_distant, min_x, min_y = distant_min(ego_car_box, surronding_car_box)
+        surrounding_vehicle_box = coordination(surrounding_vehicle_parmeters)
+        min_distant, min_x, min_y = distant_min(ego_car_box, surrounding_vehicle_box)
         d_min.append(min_distant)
         x_min.append(min_x)
         y_min.append(min_y)
     return d_min, x_min, y_min
 
-
-def dynamic_surrounding_vehicle(surounding_car_parmeters, delta_T):
-    """
-    Args:
-        surounding_car_parmeters: {1:{x, y, phi, car_length, car_width},       for surrounding vehicles
-                                   2:{x, y, phi, car_length, car_width},
-                                  ......}
-
-    Returns: surrounding vehicles next parameters
-
-    """
-    dynamic_surrounding_vehicle = {}
-    for key, value in surounding_car_parmeters.items():
-        surrounding_vehicle_velocity = value["v"]
-        surrounding_vehicle_x = value["x"]
-        next_surrounding_vehicle_x = surrounding_vehicle_x + surrounding_vehicle_velocity * delta_T
-        surrounding_vehicle_parmeters_next = {
-            "x": next_surrounding_vehicle_x,
-            "y": value["y"],
-            "phi": value["phi"],
-            "v": value["v"],  # m/s
-            "car_length": value["car_length"],
-            "car_width": value["car_width"],
-        }
-        dynamic_surrounding_vehicle[key] = surrounding_vehicle_parmeters_next
-    return dynamic_surrounding_vehicle
 
 
 

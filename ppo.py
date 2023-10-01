@@ -44,7 +44,7 @@ class PolicyNetContinuous(torch.nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         mu = torch.tanh(self.fc_mu(x))
-        std = F.softplus(self.fc_std(x))
+        std = F.softplus(self.fc_std(x))+0.001
         return mu, std
 
 
@@ -253,17 +253,17 @@ def train_on_policy_agent(env, agent, num_episodes, render_flag=False):
                 if (i_episode + 1) % 10 == 0:
                     pbar.set_postfix(
                         {
-                            "episode": "%d" % (num_episodes / 10 * i + i_episode + 1),
-                            "return": "%.3f" % np.mean(return_list[-10:]),
-                            "num_steps": "%.3f" % np.mean(num_ls[-10:]),
-                            "learning rate": agent.actor_optimizer.param_groups[0][
-                                "lr"
-                            ],
+                            "eps": "%d" % (num_episodes / 10 * i + i_episode + 1),
+                            "rt": "%.3f" % np.mean(return_list[-10:]),
+                            "ns": "%.3f" % np.mean(num_ls[-10:]),
+                            # "lr": agent.actor_optimizer.param_groups[0][
+                            #     "lr"
+                            # ],
                             "info": info_display,
                         }
                     )
                 pbar.update(1)
-        saveclass(env.state_norm, "./model/text_file/state_norm_%d" % i)
+        # saveclass(env.state_norm, "./model/state_norm_%d" % i)
         torch.save(agent.actor.state_dict(), "./model/ppo_continuous_%d.pkl" % i)
         evluation_policy(env, agent.hidden_dim, agent.device, i)
     return return_list

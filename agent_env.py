@@ -31,27 +31,39 @@ from utils import Normalization, RewardScaling
 #     return final_obs
 def dictobs2listobs(obs):
     list_obs = []
+    list_obs_dmin = []
+    list_obs_xmin = []
+    list_obs_ymin = []
+    list_obs_dmin_next = []
+    list_obs_xmin_next = []
+    list_obs_ymin_next = []
     for key in obs.keys():
         if key == "dmin":
             for i in obs[key]:
-                list_obs.append(i)
+                list_obs_dmin.append(i)
+            obs[key] = np.mean(list_obs_dmin)
         elif key == "x_min":
             for i in obs[key]:
-                list_obs.append(i)
+                list_obs_xmin.append(i)
+            obs[key] = np.mean(list_obs_xmin)
         elif key == "y_min":
             for i in obs[key]:
-                list_obs.append(i)
+                list_obs_ymin.append(i)
+            obs[key] = np.mean(list_obs_ymin)
         elif key == "dmin_next":
             for i in obs[key]:
-                list_obs.append(i)
+                list_obs_dmin_next.append(i)
+            obs[key] = np.mean(list_obs_dmin_next)
         elif key == "x_min_next":
             for i in obs[key]:
-                list_obs.append(i)
+                list_obs_xmin_next.append(i)
+            obs[key] = np.mean(list_obs_xmin_next)
         elif key == "y_min_next":
             for i in obs[key]:
-                list_obs.append(i)
-        else:
-            list_obs.append(obs[key])
+                list_obs_ymin_next.append(i)
+            obs[key] = np.mean(list_obs_ymin_next)
+    for key in obs.keys():
+        list_obs.append(obs[key])
     return list_obs
 
 def map_action(action, action_space):
@@ -87,7 +99,7 @@ class AgentEnv(object):
         self.state_lower = np.array(
             [
                 0,
-                0,
+                self.env.road_init_width,
                 0,
                 -1,
                 math.radians(-25),
@@ -95,7 +107,7 @@ class AgentEnv(object):
                 0,
                 math.radians(-5),
                 0,
-                0,
+                self.env.road_init_width,
                 0,
                 -1,
                 math.radians(-25),
@@ -103,12 +115,12 @@ class AgentEnv(object):
                 0,
                 math.radians(-5),
             ]
-            + [-np.inf] * 30
+            + [-100]*6 
         )
         self.state_upper = np.array(
             [
                 self.env.road_length,
-                self.env.road_width * self.env.road_num,
+                self.env.road_width * self.env.road_num+self.env.road_init_width,
                 50,
                 1,
                 math.radians(25),
@@ -116,7 +128,7 @@ class AgentEnv(object):
                 1,
                 math.radians(5),
                 self.env.road_length,
-                self.env.road_width * self.env.road_num,
+                self.env.road_width * self.env.road_num+self.env.road_init_width,
                 50,
                 1,
                 math.radians(25),
@@ -124,7 +136,7 @@ class AgentEnv(object):
                 1,
                 math.radians(5),
             ]
-            + [np.inf] * 30
+            + [100]*6
         )
         self.observation_space = Box(
             low=self.state_lower,
@@ -170,7 +182,9 @@ if __name__ == "__main__":
     # print('')
 
     while not done:
-        action = [0.1, 0.1]
+        action = [0.5, 0]
         next_obs, reward, done, info = env.step(action)
+        print(next_obs)
         env.render()
         # print(next_obs, reward, done, info)
+        print(info)

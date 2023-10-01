@@ -4,11 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from matplotlib.patches import Polygon
-
-
-from vehicle_env import VehicleEnv
-from road_curvature_gradient_build import road_curvature_gradient_build
-from utils import coordination, e_s_distance, dynamic_surrounding_vehicle
+from utils import coordination
 
 
 def find_max_num_sv(surrounding_vehicles):
@@ -23,13 +19,11 @@ def find_max_num_sv(surrounding_vehicles):
 
 class SV_env(object):
     def __init__(self) -> None:
-        self.road_curvature = None
-        self.road_gradient = None
         self.surrounding_vehicle_all = pd.read_csv("New_NGSIM.csv")
         self.surrounding_vehicle_total_time = np.unique(self.surrounding_vehicle_all["Frame_ID"]).shape[0]
         self.surrounding_vehicle_max_num = find_max_num_sv(self.surrounding_vehicle_all)
         self.frames = np.unique(self.surrounding_vehicle_all["Frame_ID"])
-        self.inital_time = 800
+        self.inital_time = 3000
         self.surrounding_vehicles_lat_min = min(self.surrounding_vehicle_all["Local_X"])
         self.surrounding_vehicles_lat_max = max(self.surrounding_vehicle_all["Local_X"])
         self.surrounding_vehicles_lon_min = 0
@@ -44,6 +38,7 @@ class SV_env(object):
 
 
     def reset(self):
+        self.time_step = self.inital_time
         self.surrounding_vehicles = self.surrounding_vehicle_all[(self.surrounding_vehicle_all["Frame_ID"]==self.inital_time) &
                                                                  (self.surrounding_vehicle_all["Local_Y"]>=self.surrounding_vehicles_lon_min) &
                                                                  (self.surrounding_vehicle_all["Local_Y"]<=self.surrounding_vehicles_lon_max)]  # surrounding vehicles
@@ -138,8 +133,13 @@ class SV_env(object):
 if __name__ == "__main__":
     sv_env = SV_env()
     obs = sv_env.reset()
-    sv_env.render()
-    for i in range(1, 2000):
+    for i in range(1, 200):
+        obs_new = sv_env.step()
+        obs = obs_new
+        sv_env.render()
+
+    obs = sv_env.reset()
+    for i in range(1, 200):
         obs_new = sv_env.step()
         obs = obs_new
         sv_env.render()

@@ -3,11 +3,11 @@ import numpy as np
 from scipy import interpolate
 
 
-def road_curvature_gradient_build(road_lenth, road_width, road_num):
+def road_curvature_gradient_build(road_lenth, road_width, road_num,road_init_width):
     x_max = road_lenth
     y_max = road_width * road_num
     x_list = np.linspace(0, x_max, 1000)
-    y_list = np.linspace(0, y_max, 1000)
+    y_list = np.linspace(road_init_width, road_init_width+y_max, 1000)
     np.random.seed(1234)
     gradient_list = np.random.uniform(-5, 5, (1000, 1000))
     gradient_cal = interpolate.RegularGridInterpolator((x_list, y_list), gradient_list, method="linear")

@@ -7,35 +7,38 @@ from matplotlib.patches import Polygon
 
 from vehicle_env import VehicleEnv
 from road_curvature_gradient_build import road_curvature_gradient_build
-from utils import coordination, e_s_distance, dynamic_surrounding_vehicle
+from utils import coordination, e_s_distance
+from surrounding_vehicle import SV_env
 
 
 class RoadEnv(object):
     def __init__(self) -> None:
         self.road_curvature = None
         self.road_gradient = None
-        self.surrounding_vehicle_position = 1000
+        self.surrounding_vehicles_all = SV_env()
         # parameters for road
-        self.road_width = 3.75
-        self.road_length = 5000
-        self.road_num = 3
-        self.road_gradient_fun = road_curvature_gradient_build(self.road_length, self.road_width, self.road_num)
+        self.road_width = 23
+        self.road_init_width = 10
+        self.road_length = 300
+        self.road_num = 1
+        self.road_gradient_fun = road_curvature_gradient_build(self.road_length, self.road_width, self.road_num,self.road_init_width)
 
         # parameters for ego vehicle
         self.vehicle = VehicleEnv(
             road_width=self.road_width,
             road_length=self.road_length,
             road_num=self.road_num,
+            road_init_width=self.road_init_width,
         )
         self.vehicle_obs = None  # vehicle observation
-        self.ego_x_initial = 5
-        self.ego_y_initial = self.road_width / 2 * 3
+        self.ego_x_initial = 0
+        self.ego_y_initial = self.road_init_width + self.road_width / 2
         self.ego_x_dot_initial = 20
         self.ego_y_dot_initial = 0
         self.ego_phi_initial = 0
         self.ego_omega_initial = 0
         self.ego_soc_initial = 0.7
-        self.surrounding_velocity = 10
+
 
         self.dmin = None
         self.x_min = None
@@ -43,52 +46,11 @@ class RoadEnv(object):
         self.dmin_next = None
         self.x_min_next = None
         self.y_min_next = None
-        self.max_distant = math.sqrt(self.road_length**2 + (self.road_num * self.road_width) ** 2)
-        self.surrounding_vehicles = None
+        self.max_distant = math.sqrt(self.road_length**2 + (self.road_num * self.road_width+self.road_init_width) ** 2)
+
 
     def reset(self):
-        self.surrounding_vehicles = {
-            "1": {
-                "x": self.surrounding_vehicle_position / 3 * 2,
-                "y": self.road_width / 2,
-                "phi": 0,
-                "v": self.surrounding_velocity,
-                "car_length": 5,
-                "car_width": self.road_width / 3 * 2,
-            },
-            "2": {
-                "x": self.surrounding_vehicle_position,
-                "y": self.road_width / 2 * 3,
-                "phi": 0,
-                "v": self.surrounding_velocity,
-                "car_length": 5,
-                "car_width": self.road_width / 3 * 2,
-            },
-            "3": {
-                "x": self.surrounding_vehicle_position / 5 * 0,
-                "y": self.road_width / 2 * 5,
-                "phi": 0,
-                "v": self.surrounding_velocity,
-                "car_length": 5,
-                "car_width": self.road_width / 3 * 2,
-            },
-            "4": {
-                "x": self.surrounding_vehicle_position / 3,
-                "y": self.road_width / 2 * 3,
-                "phi": 0,
-                "v": self.surrounding_velocity,
-                "car_length": 5,
-                "car_width": self.road_width / 3 * 2,
-            },
-            "5": {
-                "x": self.surrounding_vehicle_position / 3 * 2,
-                "y": self.road_width / 2 * 5,
-                "phi": 0,
-                "v": self.surrounding_velocity,
-                "car_length": 5,
-                "car_width": self.road_width / 3 * 2,
-            },
-        }  # surrounding vehicles
+        self.surrounding_vehicles = self.surrounding_vehicles_all.reset()  # surrounding vehicles
         self.road_curvature = 0  # 曲率
         self.road_gradient = self.road_gradient_fun([self.ego_x_initial, self.ego_y_initial])[0]
         # update theta
@@ -135,7 +97,7 @@ class RoadEnv(object):
         # update theta
         self.vehicle.update_theta(math.radians(self.road_gradient))
         next_vehicle_obs, reward_ego, done_ego, info_ego = self.vehicle.step(action)
-        next_surrounding_vehicles = dynamic_surrounding_vehicle(self.surrounding_vehicles, self.vehicle.delta_t)
+        next_surrounding_vehicles = self.surrounding_vehicles_all.step()  # surrounding vehicles
         self.surrounding_vehicles = next_surrounding_vehicles
 
         self.dmin_next, self.x_min_next, self.y_min_next = e_s_distance(
@@ -177,39 +139,29 @@ class RoadEnv(object):
 
     def plot_road(self):
         plt.cla()
-        x_ls = []
-        for key, value in self.surrounding_vehicles.items():
-            x_ls.append(value["x"])
-        x_ls.append(self.vehicle_obs["x"])
-        x_min = min(x_ls)
-        x_max = max(x_ls)
+        lateralPos = self.surrounding_vehicles["Local_X"]
+        longitudePos = self.surrounding_vehicles["Local_Y"]
+        id = self.surrounding_vehicles["Vehicle_ID"]
+        len = self.surrounding_vehicles["v_Length"]
+        width = self.surrounding_vehicles["v_Width"]
+        v_class = self.surrounding_vehicles["v_Class"]
         # 绘制左右两边的黑色实线
         # view_road_len = 30
         plt.plot(
-            [x_min - 5, x_max + 5],
-            [0, 0],
+            [self.surrounding_vehicles_all.surrounding_vehicles_lon_min, self.surrounding_vehicles_all.surrounding_vehicles_lon_max],
+            [self.surrounding_vehicles_all.surrounding_vehicles_lat_min-self.surrounding_vehicles_all.surrounding_vehicle_width_max/2, self.surrounding_vehicles_all.surrounding_vehicles_lat_min-self.surrounding_vehicles_all.surrounding_vehicle_width_max/2],
             color="black",
             linewidth=2,
         )
         plt.plot(
-            [x_min - 5, x_max + 5],
-            [self.road_num * self.road_width, self.road_num * self.road_width],
+            [self.surrounding_vehicles_all.surrounding_vehicles_lon_min, self.surrounding_vehicles_all.surrounding_vehicles_lon_max],
+            [self.surrounding_vehicles_all.surrounding_vehicles_lat_max+self.surrounding_vehicles_all.surrounding_vehicle_width_max/2, self.surrounding_vehicles_all.surrounding_vehicles_lat_max+self.surrounding_vehicles_all.surrounding_vehicle_width_max/2],
             color="black",
             linewidth=2,
         )
 
-        # 绘制车道线
-        for i in range(1, self.road_num):
-            lane_y = i * self.road_width
-            plt.plot(
-                [x_min - 5, x_max + 5],
-                [lane_y, lane_y],
-                linestyle="dashed",
-                color="black",
-            )
 
         # 小车参数
-
         ego_parmeters = [
             self.vehicle_obs["x"],
             self.vehicle_obs["y"],
@@ -220,31 +172,53 @@ class RoadEnv(object):
         car_box = coordination(ego_parmeters)
         rectangle_ego = Polygon(car_box, closed=True, edgecolor="red", linewidth=2, facecolor="none")
 
-        for key, value in self.surrounding_vehicles.items():
+       
+
+        for i in range(0,self.surrounding_vehicles.shape[0]):
             surrounding_vehicle_parmeters = [
-                value["x"],
-                value["y"],
-                value["phi"],
-                value["car_length"],
-                value["car_width"],
+                longitudePos.values[i],
+                lateralPos.values[i],
+                0,
+                len.values[i],
+                width.values[i],
             ]
             surrounding_vehicle_box = coordination(surrounding_vehicle_parmeters)
 
             # 创建Polygon对象
-            rectangle = Polygon(
-                surrounding_vehicle_box,
-                closed=True,
-                edgecolor="blue",
-                linewidth=2,
-                facecolor="none",
-            )
+            if v_class.values[i] == 1:
+                rectangle = Polygon(
+                    surrounding_vehicle_box,
+                    closed=True,
+                    edgecolor="red",
+                    linewidth=2,
+                    facecolor="none",
+                )
+            elif v_class.values[i] == 2:
+                rectangle = Polygon(
+                    surrounding_vehicle_box,
+                    closed=True,
+                    edgecolor="green",
+                    linewidth=2,
+                    facecolor="none",
+                )
+            elif v_class.values[i] == 3:
+                rectangle = Polygon(
+                    surrounding_vehicle_box,
+                    closed=True,
+                    edgecolor="blue",
+                    linewidth=2,
+                    facecolor="none",
+                )
 
             # 将小车形状添加到图形中
             plt.gca().add_patch(rectangle)
+            plt.text(longitudePos.values[i], lateralPos.values[i], str(id.values[i]), fontsize=10, color='red', style='italic')
 
         # 将小车形状添加到图形中
         plt.gca().add_patch(rectangle_ego)
         plt.pause(self.vehicle.delta_t)
+
+
 
 
 if __name__ == "__main__":
@@ -264,3 +238,5 @@ if __name__ == "__main__":
 
     print("reward:", sum(reward_lists))
     print("obs:", obs_lists[-1])
+    print("done:", done)
+    print("info:", info)
