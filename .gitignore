@@ -3,5 +3,7 @@
 .idea
 __pycache__/
 *.pth
+*.pkl
+*.csv
 model
 .DS_Store
