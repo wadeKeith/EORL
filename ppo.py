@@ -29,7 +29,7 @@ def evluation_policy(env, hidden_dim, device, model_num):
         state = next_obs
         num += 1
 
-    print("reward: ", np.sum(reward_ls), "num: ", num)
+    print("reward: ", np.sum(reward_ls), "num: ", num,"info: ", info)
 
 
 class PolicyNetContinuous(torch.nn.Module):
@@ -140,7 +140,7 @@ class PPOContinuous:
         # 动作是正态分布
         old_log_probs = action_dists.log_prob(actions)
 
-        updata_size = 32
+        updata_size = 64
         for _ in range((states.size()[0]) // updata_size + 1):
             mu, std = self.actor(states)
             action_dists = torch.distributions.Normal(mu, std)
