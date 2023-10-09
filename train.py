@@ -6,18 +6,18 @@ from ppo import PPOContinuous, train_on_policy_agent
 have_model = 0
 render_flag = 0
 
-seed = 1111
+seed = 429
 
 
-actor_lr = 3e-4
-critic_lr = 1e-3
-num_episodes = 2000
-hidden_dim = 64
+actor_lr = 1e-5
+critic_lr = 1e-5
+num_episodes = 3000
+hidden_dim = 128
 gamma = 0.9999
 lmbda = 0.95
 epochs = 100
-eps = 0.1
-entropy_coef = 0.001
+eps = 0.15
+entropy_coef = 0.01
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps")
 
 env = AgentEnv()

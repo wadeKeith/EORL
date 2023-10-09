@@ -268,7 +268,7 @@ class VehicleEnv(object):
         reward = (
             speed_reward
             +5*abs(np.sin((2*np.pi/((self.road_width)/3))*(self.y_next-(self.road_init_width))))
-            - 2*pb*self.delta_t / (self.bat_q/3600)
+            - 1*pb*self.delta_t / (self.bat_q/3600)
             - 0.1 * abs(action[0])
             - 0.1 * abs(action[1])
         )

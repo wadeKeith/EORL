@@ -7,7 +7,7 @@ from matplotlib.patches import Polygon
 
 from vehicle_env import VehicleEnv
 from road_curvature_gradient_build import road_curvature_gradient_build
-from utils import coordination, e_s_distance
+from utils import coordination, direction_distance
 from surrounding_vehicle import SV_env
 
 
@@ -41,11 +41,7 @@ class RoadEnv(object):
 
 
         self.dmin = None
-        self.x_min = None
-        self.y_min = None
         self.dmin_next = None
-        self.x_min_next = None
-        self.y_min_next = None
         self.max_distant = math.sqrt(self.road_length**2 + (self.road_num * self.road_width+self.road_init_width) ** 2)
 
 
@@ -64,7 +60,7 @@ class RoadEnv(object):
             self.ego_omega_initial,
             self.ego_soc_initial,
         )
-        self.dmin_next, self.x_min_next, self.y_min_next = e_s_distance(
+        self.dmin_next,_ = direction_distance(
             [
                 self.vehicle_obs["x_next"],
                 self.vehicle_obs["y_next"],
@@ -73,16 +69,11 @@ class RoadEnv(object):
                 self.vehicle.car_width,
             ],
             self.surrounding_vehicles,
+            self.max_distant,
         )
         self.dmin = self.dmin_next
-        self.x_min = self.x_min_next
-        self.y_min = self.y_min_next
-        self.vehicle_obs["dmin"] = self.dmin
-        self.vehicle_obs["x_min"] = self.x_min
-        self.vehicle_obs["y_min"] = self.y_min
-        self.vehicle_obs["dmin_next"] = self.dmin_next
-        self.vehicle_obs["x_min_next"] = self.x_min_next
-        self.vehicle_obs["y_min_next"] = self.y_min_next
+        self.vehicle_obs["xy_direction"] = self.dmin
+        self.vehicle_obs["xy_direction_next"] = self.dmin_next
         return self.vehicle_obs
 
     def step(self, action):
@@ -100,7 +91,7 @@ class RoadEnv(object):
         next_surrounding_vehicles = self.surrounding_vehicles_all.step()  # surrounding vehicles
         self.surrounding_vehicles = next_surrounding_vehicles
 
-        self.dmin_next, self.x_min_next, self.y_min_next = e_s_distance(
+        self.dmin_next,flag_collision = direction_distance(
             [
                 next_vehicle_obs["x_next"],
                 next_vehicle_obs["y_next"],
@@ -109,18 +100,15 @@ class RoadEnv(object):
                 self.vehicle.car_width,
             ],
             self.surrounding_vehicles,
+            self.max_distant,
         )
-        next_vehicle_obs["dmin"] = self.dmin
-        next_vehicle_obs["x_min"] = self.x_min
-        next_vehicle_obs["y_min"] = self.y_min
-        next_vehicle_obs["dmin_next"] = self.dmin_next
-        next_vehicle_obs["x_min_next"] = self.x_min_next
-        next_vehicle_obs["y_min_next"] = self.y_min_next
+        # print(self.dmin_next)
+        next_vehicle_obs["xy_direction"] = self.dmin
+
+        next_vehicle_obs["xy_direction_next"] = self.dmin_next
         self.dmin = self.dmin_next
-        self.x_min = self.x_min_next
-        self.y_min = self.y_min_next
         self.vehicle_obs = next_vehicle_obs
-        if min(self.dmin_next) <= 0:
+        if flag_collision <= 0:
             done_road = 1
         else:
             done_road = 0
@@ -228,6 +216,7 @@ if __name__ == "__main__":
     obs_lists = []
     reward_lists = []
     while not done:
+        # print(obs['dmin'])
         obs_lists.append(obs)
         action = [2, 0]
         next_obs, reward, done, info = road_env.step(action)

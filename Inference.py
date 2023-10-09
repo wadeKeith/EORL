@@ -2,15 +2,14 @@ import torch
 import numpy as np
 from agent_env import AgentEnv
 from ppo import PolicyNetContinuous
-from utils import loadclass
 from vehicle_utils import  pb_cal
 import matplotlib.pyplot as plt
 
 env = AgentEnv()
 
 
-seed = 1111
-hidden_dim = 64
+seed = 429
+hidden_dim = 128
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps")
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
@@ -18,7 +17,7 @@ torch.cuda.manual_seed_all(seed)
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]  # 连续动作空间
 
-model_num = 27
+model_num = 89
 agent_test = PolicyNetContinuous(state_dim, hidden_dim, action_dim).to(device)
 agent_test.load_state_dict(torch.load("./model/ppo_continuous_%d.pkl" % model_num))
 agent_test.eval()

@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import pickle
+
 
 def plot_list(list_data, plt_name):
     plt.plot(list_data)
@@ -143,8 +143,8 @@ def distant_min(polygon1, polygon2):
         x_min_ls.append(x_min)
         y_min_ls.append(y_min)
         min_distant = min(distant)
-        min_x = abs(x_min_ls[distant.index(min(distant))])
-        min_y = abs(y_min_ls[distant.index(min(distant))])
+        min_x = x_min_ls[distant.index(min(distant))]
+        min_y = y_min_ls[distant.index(min(distant))]
     return min_distant, min_x, min_y
 
 
@@ -224,72 +224,108 @@ def e_s_distance(ego_car_parmeters, surrounding_vehicles):
         y_min.append(min_y)
     return d_min, x_min, y_min
 
+def direction_distance(ego_car_parmeters, surrounding_vehicles,max_distant):
+    d_min_ls, x_min_ls, y_min_ls = e_s_distance(ego_car_parmeters, surrounding_vehicles)
+    x_min_1 = []
+    y_min_1 = []
+    d_min_1 = []
+    x_min_2 = []
+    y_min_2 = []
+    d_min_2 = []
+    x_min_3 = []
+    y_min_3 = []
+    d_min_3 = []
+    x_min_4 = []
+    y_min_4 = []
+    d_min_4 = []
+    x_min_5 = []
+    y_min_5 = []
+    d_min_5 = []
+    x_min_6 = []
+    y_min_6 = []
+    d_min_6 = []
+    x_min_7 = []
+    y_min_7 = []
+    d_min_7 = []
+    x_min_8 = []
+    y_min_8 = []
+    d_min_8 = []
+    d_min_c = 1
+    for i in range(0,len(d_min_ls)):
+        if x_min_ls[i] < 0 and y_min_ls[i] < 0:
+            x_min_1.append(x_min_ls[i])
+            y_min_1.append(y_min_ls[i])
+            d_min_1.append(d_min_ls[i])
+        elif x_min_ls[i] < 0 and y_min_ls[i] > 0:
+            x_min_2.append(x_min_ls[i])
+            y_min_2.append(y_min_ls[i])
+            d_min_2.append(d_min_ls[i])
+        elif x_min_ls[i] > 0 and y_min_ls[i] < 0:
+            x_min_3.append(x_min_ls[i])
+            y_min_3.append(y_min_ls[i])
+            d_min_3.append(d_min_ls[i])
+        elif x_min_ls[i] > 0 and y_min_ls[i] > 0:
+            x_min_4.append(x_min_ls[i])
+            y_min_4.append(y_min_ls[i])
+            d_min_4.append(d_min_ls[i])
+        elif x_min_ls[i] == 0 and y_min_ls[i] < 0:
+            x_min_5.append(x_min_ls[i])
+            y_min_5.append(y_min_ls[i])
+            d_min_5.append(d_min_ls[i])
+        elif x_min_ls[i] == 0 and y_min_ls[i] > 0:
+            x_min_6.append(x_min_ls[i])
+            y_min_6.append(y_min_ls[i])
+            d_min_6.append(d_min_ls[i])
+        elif x_min_ls[i] < 0 and y_min_ls[i] == 0:
+            x_min_7.append(x_min_ls[i])
+            y_min_7.append(y_min_ls[i])
+            d_min_7.append(d_min_ls[i])
+        elif x_min_ls[i] > 0 and y_min_ls[i] == 0:
+            x_min_8.append(x_min_ls[i])
+            y_min_8.append(y_min_ls[i])
+            d_min_8.append(d_min_ls[i])
+        elif x_min_ls[i] == 0 and y_min_ls[i] == 0:
+            d_min_c = -1
+    if len(d_min_1) == 0:
+        d_min_1_determine = [-300,-33]
+    else:
+        d_min_1_determine = [x_min_1[d_min_1.index(min(d_min_1))],y_min_1[d_min_1.index(min(d_min_1))]]
+    if len(d_min_2) == 0:
+        d_min_2_determine = [-300,33]
+    else:
+        d_min_2_determine = [x_min_2[d_min_2.index(min(d_min_2))],y_min_2[d_min_2.index(min(d_min_2))]]
+    if len(d_min_3) == 0:
+        d_min_3_determine = [300,-33]
+    else:
+        d_min_3_determine = [x_min_3[d_min_3.index(min(d_min_3))],y_min_3[d_min_3.index(min(d_min_3))]]
+    if len(d_min_4) == 0:
+        d_min_4_determine = [300,33]
+    else:
+        d_min_4_determine = [x_min_4[d_min_4.index(min(d_min_4))],y_min_4[d_min_4.index(min(d_min_4))]]
+    if len(d_min_5) == 0:
+        d_min_5_determine = [0,-33]
+    else:
+        d_min_5_determine = [x_min_5[d_min_5.index(min(d_min_5))],y_min_5[d_min_5.index(min(d_min_5))]]
+    if len(d_min_6) == 0:
+        d_min_6_determine = [0,33]
+    else:
+        d_min_6_determine = [x_min_6[d_min_6.index(min(d_min_6))],y_min_6[d_min_6.index(min(d_min_6))]]
+    if len(d_min_7) == 0:
+        d_min_7_determine = [-300,0]
+    else:
+        d_min_7_determine = [x_min_7[d_min_7.index(min(d_min_7))],y_min_7[d_min_7.index(min(d_min_7))]]
+    if len(d_min_8) == 0:
+        d_min_8_determine = [300,0]
+    else:
+        d_min_8_determine = [x_min_8[d_min_8.index(min(d_min_8))],y_min_8[d_min_8.index(min(d_min_8))]]
+    d_min_determine = d_min_1_determine+d_min_2_determine+d_min_3_determine+d_min_4_determine+d_min_5_determine+d_min_6_determine+d_min_7_determine+d_min_8_determine
+    return d_min_determine,d_min_c
+
+    
 
 
 
 
-class RunningMeanStd:
-    # Dynamically calculate mean and std
-    def __init__(self, shape):  # shape:the dimension of input data
-        self.n = 0
-        self.mean = np.zeros(shape)
-        self.S = np.zeros(shape)
-        self.std = np.sqrt(self.S)
-
-    def update(self, x):
-        x = np.array(x)
-        self.n += 1
-        if self.n == 1:
-            self.mean = x
-            self.std = x
-        else:
-            old_mean = self.mean.copy()
-            self.mean = old_mean + (x - old_mean) / self.n
-            self.S = self.S + (x - old_mean) * (x - self.mean)
-            self.std = np.sqrt(self.S / self.n)
-
-
-class Normalization:
-    def __init__(self, shape):
-        self.running_ms = RunningMeanStd(shape=shape)
-
-    def __call__(self, x, update=True):
-        # Whether to update the mean and std,during the evaluating,update=False
-        if update:
-            self.running_ms.update(x)
-        x = (x - self.running_ms.mean) / (self.running_ms.std + 1e-8)
-
-        return x
-
-
-class RewardScaling:
-    def __init__(self, shape, gamma):
-        self.shape = shape  # reward shape=1
-        self.gamma = gamma  # discount factor
-        self.running_ms = RunningMeanStd(shape=self.shape)
-        self.R = np.zeros(self.shape)
-
-    def __call__(self, x):
-        self.R = self.gamma * self.R + x
-        self.running_ms.update(self.R)
-        x = x / (self.running_ms.std + 1e-8)  # Only divided std
-        return x
-
-    def reset(self):  # When an episode is done,we should reset 'self.R'
-        self.R = np.zeros(self.shape)
-
-
-def saveclass(obj,name):
-    f = open(name, 'wb')
-    pickle.dump(obj, f, -1)
-    f.close()
-
-
-def loadclass(name):
-    f = open(name, 'rb')
-    retclass = pickle.load(f)
-    f.close()
-    return retclass
 
 
 

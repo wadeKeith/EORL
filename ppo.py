@@ -4,7 +4,6 @@ from tqdm import tqdm
 import torch.nn.functional as F
 import os
 from agent_env import AgentEnv
-from utils import saveclass
 
 
 def evluation_policy(env, hidden_dim, device, model_num):
@@ -37,6 +36,7 @@ class PolicyNetContinuous(torch.nn.Module):
         super(PolicyNetContinuous, self).__init__()
         self.fc1 = torch.nn.Linear(state_dim, hidden_dim)
         self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = torch.nn.Linear(hidden_dim, hidden_dim)
         self.fc_mu = torch.nn.Linear(hidden_dim, action_dim)
         self.fc_std = torch.nn.Linear(hidden_dim, action_dim)
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps")
@@ -44,10 +44,28 @@ class PolicyNetContinuous(torch.nn.Module):
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
         mu = torch.tanh(self.fc_mu(x))
         std = F.softplus(self.fc_std(x))
         std = std+ 1e-8*torch.ones(size=std.shape).to(self.device)
         return mu, std
+    
+# class SurroundingNetContinuous(torch.nn.Module):
+#     def __init__(self, state_dim, hidden_dim, action_dim):
+#         super(PolicyNetContinuous, self).__init__()
+#         self.fc1 = torch.nn.Linear(state_dim, hidden_dim)
+#         self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
+#         self.fc_mu = torch.nn.Linear(hidden_dim, action_dim)
+#         self.fc_std = torch.nn.Linear(hidden_dim, action_dim)
+#         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps")
+
+#     def forward(self, x):
+#         x = F.relu(self.fc1(x))
+#         x = F.relu(self.fc2(x))
+#         mu = torch.tanh(self.fc_mu(x))
+#         std = F.softplus(self.fc_std(x))
+#         std = std+ 1e-8*torch.ones(size=std.shape).to(self.device)
+#         return mu, std
 
 
 class ValueNet(torch.nn.Module):
