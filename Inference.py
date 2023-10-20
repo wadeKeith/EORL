@@ -17,7 +17,7 @@ torch.cuda.manual_seed_all(seed)
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]  # 连续动作空间
 
-model_num = 89
+model_num = 99
 agent_test = PolicyNetContinuous(state_dim, hidden_dim, action_dim).to(device)
 agent_test.load_state_dict(torch.load("./model/ppo_continuous_%d.pkl" % model_num))
 agent_test.eval()

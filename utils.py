@@ -345,3 +345,13 @@ if __name__ == "__main__":
     # plt.show()
     d_min = distant_min(polygon1, polygon2)
     print(d_min)
+
+
+def smooth(data, sm=100):
+    smooth_data = []
+    for d in data:
+        y = np.ones(sm) * 1 / sm
+        d = np.array(d).flatten()
+        d = np.convolve(y, d, "same")
+        smooth_data.append(d)
+    return smooth_data

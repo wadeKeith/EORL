@@ -1,7 +1,9 @@
 import torch
-
+import numpy as np
 from agent_env import AgentEnv
 from ppo import PPOContinuous, train_on_policy_agent
+from utils import smooth
+import scipy.io as sio
 
 have_model = 0
 render_flag = 0
@@ -33,3 +35,7 @@ if have_model:
     agent.actor.load_state_dict(torch.load("E:\Github\EORL\ppo_continuous_base.pkl"))
 # train
 return_list = train_on_policy_agent(env, agent, num_episodes, render_flag)
+
+return_list = smooth([return_list])
+np.save('EORL.npy',return_list[0])
+sio.savemat('EORL.mat',{'EORL':return_list})
