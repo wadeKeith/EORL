@@ -38,4 +38,4 @@ return_list = train_on_policy_agent(env, agent, num_episodes, render_flag)
 
 return_list = smooth([return_list])
 np.save('EORL.npy',return_list[0])
-sio.savemat('EORL.mat',{'EORL':return_list})
+sio.savemat('EORL.mat',{'EORL':return_list[0]})
