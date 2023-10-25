@@ -265,8 +265,12 @@ class VehicleEnv(object):
             info = {}
         # speed_reward = np.sin((2*np.pi/((20-0)*2))*(self.x_dot_next)) if 0<self.x_dot_next<20 else -1
         speed_reward = 0
+        if done_arrive:
+            reward_arrive = 100    # 到达终点奖励
+        else:
+            reward_arrive = 0
         reward = (
-            speed_reward
+            speed_reward+reward_arrive+math.sin((math.pi/2/self.road_length)*self.x_next)
             +5*abs(np.sin((2*np.pi/((self.road_width)/3))*(self.y_next-(self.road_init_width))))
             - 1*pb*self.delta_t / (self.bat_q/3600)
             - 0.1 * abs(action[0])
