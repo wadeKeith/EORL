@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import math
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,7 +7,7 @@ from vehicle_utils import bat_dynamic, pb_cal
 
 
 class VehicleEnv(object):
-    def __init__(self, road_width, road_length, road_num,road_init_width):
+    def __init__(self, road_width, road_length, road_num,road_init_width,road_gradient_func):
         self.x = None
         self.y = None
         self.x_dot = None
@@ -15,7 +16,8 @@ class VehicleEnv(object):
         self.omega = None  # 角速度
         self.force = None  # driving force
         self.soc = None  # state of charge
-
+        self.theta = None
+        
         # next time step
         self.x_next = None
         self.y_next = None
@@ -24,8 +26,10 @@ class VehicleEnv(object):
         self.phi_next = None  # 下一时刻角度
         self.omega_next = None  # 下一时刻角速度
         self.soc_next = None  # 下一时刻电池电量
+        self.theta_next = None
 
         # self.x_ddot = None
+        self.road_gradient_func = road_gradient_func
         self.delta_t = 0.1  # simulate time step
 
         # parameters for vehicle
@@ -86,8 +90,7 @@ class VehicleEnv(object):
         self.battery_eff_cha_1d = interpolate.RegularGridInterpolator((self.bat_eff_soc,), self.bat_eff_cha)
         self.bat_q = 25 * 1000 * 3600  # 电池容量 25kwh
 
-        self.theta = None
-        self.theta_next = None
+
 
         self.road_width = road_width
         self.road_init_width = road_init_width
@@ -96,8 +99,6 @@ class VehicleEnv(object):
         self.car_length = self.a_v + self.b_v
         self.car_width = 1.95072
 
-    def update_theta(self, theta):
-        self.theta_next = theta
 
     def reset(self, x, y, x_dot, y_dot, phi, omega, soc):
         self.x = x
@@ -107,7 +108,8 @@ class VehicleEnv(object):
         self.phi = phi  # 角度
         self.omega = omega  # 角速度
         self.soc = soc  # state of charge
-        self.theta = self.theta_next
+        self.theta = math.radians(self.road_gradient_func([self.x, self.y])[0])
+
         # next time step
         self.x_next = x
         self.y_next = y
@@ -116,6 +118,7 @@ class VehicleEnv(object):
         self.phi_next = phi  # 角度
         self.omega_next = omega  # 角速度
         self.soc_next = soc  # state of charge
+        self.theta_next = self.theta
         return {
             "x": self.x,
             "y": self.y,
@@ -174,15 +177,15 @@ class VehicleEnv(object):
         ) / (self.I_zz * self.x_dot - self.W * self.delta_t)
         force = (
             action[0] * self.m
-            + self.m * self.g * self.tau_r * math.cos(self.theta_next)
-            + self.m * self.g * math.sin(self.theta_next)
+            + self.m * self.g * self.tau_r * math.cos(self.theta)
+            + self.m * self.g * math.sin(self.theta)
             + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
         )
         if self.min_torque / self.r_w <= force <= self.max_torque / self.r_w:
             self.force = (
                 action[0] * self.m
-                + self.m * self.g * self.tau_r * math.cos(self.theta_next)
-                + self.m * self.g * math.sin(self.theta_next)
+                + self.m * self.g * self.tau_r * math.cos(self.theta)
+                + self.m * self.g * math.sin(self.theta)
                 + 0.5 * self.rho_a * self.A_f * self.tau_a * self.x_dot**2
             )
             done_motor_cant_provide = 0
@@ -224,6 +227,10 @@ class VehicleEnv(object):
             self.delta_t,
             self.bat_q,
         )[0]
+        if done_outofroad or done_arrive:
+            self.theta_next = math.radians(self.road_gradient_func([self.x, self.y])[0])
+        else:
+            self.theta_next = math.radians(self.road_gradient_func([self.x_next, self.y_next])[0])
         # Return State, Reward, Done, Info
         return_state = {
             "x": self.x,

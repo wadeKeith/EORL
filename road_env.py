@@ -1,25 +1,28 @@
+# -*- coding: utf-8 -*-
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-
+import json
 from matplotlib.patches import Polygon
 
 
 from vehicle_env import VehicleEnv
 from road_curvature_gradient_build import road_curvature_gradient_build
 from utils import coordination, direction_distance
-from surrounding_vehicle import SV_env
 
 
 class RoadEnv(object):
     def __init__(self) -> None:
         self.road_curvature = None
         self.road_gradient = None
-        self.surrounding_vehicles_all = SV_env()
+        with open("sv_dic_all.json", "r") as file:
+            self.surrounding_vehicles_all = json.load(file)
+        self.surrounding_vehicles_initial_time = 3500
+        self.time_step = None
         # parameters for road
         self.road_width = 23
         self.road_init_width = 10
-        self.road_length = 300
+        self.road_length = 100
         self.road_num = 1
         self.road_gradient_fun = road_curvature_gradient_build(self.road_length, self.road_width, self.road_num,self.road_init_width)
 
@@ -29,6 +32,7 @@ class RoadEnv(object):
             road_length=self.road_length,
             road_num=self.road_num,
             road_init_width=self.road_init_width,
+            road_gradient_func = self.road_gradient_fun,
         )
         self.vehicle_obs = None  # vehicle observation
         self.ego_x_initial = 0
@@ -43,14 +47,14 @@ class RoadEnv(object):
         self.dmin = None
         self.dmin_next = None
         self.max_distant = math.sqrt(self.road_length**2 + (self.road_num * self.road_width+self.road_init_width) ** 2)
+        self.max_distances = [self.road_length,self.road_num * self.road_width+self.road_init_width]
 
 
     def reset(self):
-        self.surrounding_vehicles = self.surrounding_vehicles_all.reset()  # surrounding vehicles
+        self.surrounding_vehicles = self.surrounding_vehicles_all['%d'%self.surrounding_vehicles_initial_time]  # surrounding vehicles
+        sv_time = self.surrounding_vehicles_initial_time
+        self.time_step = self.surrounding_vehicles_initial_time
         self.road_curvature = 0  # 曲率
-        self.road_gradient = self.road_gradient_fun([self.ego_x_initial, self.ego_y_initial])[0]
-        # update theta
-        self.vehicle.update_theta(math.radians(self.road_gradient))
         self.vehicle_obs = self.vehicle.reset(
             self.ego_x_initial,
             self.ego_y_initial,
@@ -69,7 +73,7 @@ class RoadEnv(object):
                 self.vehicle.car_width,
             ],
             self.surrounding_vehicles,
-            self.max_distant,
+            self.max_distances,
         )
         self.dmin = self.dmin_next
         self.vehicle_obs["xy_direction"] = self.dmin
@@ -78,18 +82,10 @@ class RoadEnv(object):
 
     def step(self, action):
         assert isinstance(action, list), "action must be a list"
-
-        # update road gradient
-        try:
-            self.road_gradient = self.road_gradient_fun([self.vehicle_obs["x_next"], self.vehicle_obs["y_next"]])[0]
-        except:
-            print("out of road and x:", self.vehicle_obs["x_next"], "y:", self.vehicle_obs["y_next"])
-
-        # update theta
-        self.vehicle.update_theta(math.radians(self.road_gradient))
+        self.time_step = self.time_step + 1
         next_vehicle_obs, reward_ego, done_ego, info_ego = self.vehicle.step(action)
-        next_surrounding_vehicles = self.surrounding_vehicles_all.step()  # surrounding vehicles
-        self.surrounding_vehicles = next_surrounding_vehicles
+        self.surrounding_vehicles = self.surrounding_vehicles_all['%d'%self.time_step]  # surrounding vehicles
+        sv_time = self.time_step
 
         self.dmin_next,flag_collision = direction_distance(
             [
@@ -100,7 +96,7 @@ class RoadEnv(object):
                 self.vehicle.car_width,
             ],
             self.surrounding_vehicles,
-            self.max_distant,
+            self.max_distances,
         )
         # print(self.dmin_next)
         next_vehicle_obs["xy_direction"] = self.dmin
@@ -130,20 +126,20 @@ class RoadEnv(object):
         lateralPos = self.surrounding_vehicles["Local_X"]
         longitudePos = self.surrounding_vehicles["Local_Y"]
         id = self.surrounding_vehicles["Vehicle_ID"]
-        len = self.surrounding_vehicles["v_Length"]
+        length = self.surrounding_vehicles["v_Length"]
         width = self.surrounding_vehicles["v_Width"]
         v_class = self.surrounding_vehicles["v_Class"]
         # 绘制左右两边的黑色实线
         # view_road_len = 30
         plt.plot(
-            [self.surrounding_vehicles_all.surrounding_vehicles_lon_min, self.surrounding_vehicles_all.surrounding_vehicles_lon_max],
-            [self.surrounding_vehicles_all.surrounding_vehicles_lat_min-self.surrounding_vehicles_all.surrounding_vehicle_width_max/2, self.surrounding_vehicles_all.surrounding_vehicles_lat_min-self.surrounding_vehicles_all.surrounding_vehicle_width_max/2],
+            [0, self.road_length],
+            [3.0356616-2.5908/2, 3.0356616-2.5908/2],
             color="black",
             linewidth=2,
         )
         plt.plot(
-            [self.surrounding_vehicles_all.surrounding_vehicles_lon_min, self.surrounding_vehicles_all.surrounding_vehicles_lon_max],
-            [self.surrounding_vehicles_all.surrounding_vehicles_lat_max+self.surrounding_vehicles_all.surrounding_vehicle_width_max/2, self.surrounding_vehicles_all.surrounding_vehicles_lat_max+self.surrounding_vehicles_all.surrounding_vehicle_width_max/2],
+            [0, self.road_length],
+            [31.5472632+2.5908/2, 31.5472632+2.5908/2],
             color="black",
             linewidth=2,
         )
@@ -162,18 +158,18 @@ class RoadEnv(object):
 
        
 
-        for i in range(0,self.surrounding_vehicles.shape[0]):
+        for i in range(len(id)):
             surrounding_vehicle_parmeters = [
-                longitudePos.values[i],
-                lateralPos.values[i],
+                longitudePos[i],
+                lateralPos[i],
                 0,
-                len.values[i],
-                width.values[i],
+                length[i],
+                width[i],
             ]
             surrounding_vehicle_box = coordination(surrounding_vehicle_parmeters)
 
             # 创建Polygon对象
-            if v_class.values[i] == 1:
+            if v_class[i] == 1:
                 rectangle = Polygon(
                     surrounding_vehicle_box,
                     closed=True,
@@ -181,7 +177,7 @@ class RoadEnv(object):
                     linewidth=2,
                     facecolor="none",
                 )
-            elif v_class.values[i] == 2:
+            elif v_class[i] == 2:
                 rectangle = Polygon(
                     surrounding_vehicle_box,
                     closed=True,
@@ -189,7 +185,7 @@ class RoadEnv(object):
                     linewidth=2,
                     facecolor="none",
                 )
-            elif v_class.values[i] == 3:
+            elif v_class[i] == 3:
                 rectangle = Polygon(
                     surrounding_vehicle_box,
                     closed=True,
@@ -200,7 +196,7 @@ class RoadEnv(object):
 
             # 将小车形状添加到图形中
             plt.gca().add_patch(rectangle)
-            plt.text(longitudePos.values[i], lateralPos.values[i], str(id.values[i]), fontsize=10, color='red', style='italic')
+            plt.text(longitudePos[i], lateralPos[i], str(id[i]), fontsize=10, color='red', style='italic')
 
         # 将小车形状添加到图形中
         plt.gca().add_patch(rectangle_ego)
@@ -218,7 +214,7 @@ if __name__ == "__main__":
     while not done:
         # print(obs['dmin'])
         obs_lists.append(obs)
-        action = [2, 0]
+        action = [1, 0]
         next_obs, reward, done, info = road_env.step(action)
         obs = next_obs
         reward_lists.append(reward)
@@ -229,3 +225,4 @@ if __name__ == "__main__":
     print("obs:", obs_lists[-1])
     print("done:", done)
     print("info:", info)
+

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
 
 
@@ -206,16 +207,16 @@ def e_s_distance(ego_car_parmeters, surrounding_vehicles):
     lateralPos = surrounding_vehicles["Local_X"]
     longitudePos = surrounding_vehicles["Local_Y"]
     id = surrounding_vehicles["Vehicle_ID"]
-    len = surrounding_vehicles["v_Length"]
+    length = surrounding_vehicles["v_Length"]
     width = surrounding_vehicles["v_Width"]
     v_class = surrounding_vehicles["v_Class"]
-    for i in range(0,surrounding_vehicles.shape[0]):
+    for i in range(len(id)):
         surrounding_vehicle_parmeters = [
-                longitudePos.values[i],
-                lateralPos.values[i],
+                longitudePos[i],
+                lateralPos[i],
                 0,
-                len.values[i],
-                width.values[i],
+                length[i],
+                width[i],
         ]
         surrounding_vehicle_box = coordination(surrounding_vehicle_parmeters)
         min_distant, min_x, min_y = distant_min(ego_car_box, surrounding_vehicle_box)
@@ -224,7 +225,7 @@ def e_s_distance(ego_car_parmeters, surrounding_vehicles):
         y_min.append(min_y)
     return d_min, x_min, y_min
 
-def direction_distance(ego_car_parmeters, surrounding_vehicles,max_distant):
+def direction_distance(ego_car_parmeters, surrounding_vehicles,max_distances):
     d_min_ls, x_min_ls, y_min_ls = e_s_distance(ego_car_parmeters, surrounding_vehicles)
     x_min_1 = []
     y_min_1 = []
@@ -287,39 +288,49 @@ def direction_distance(ego_car_parmeters, surrounding_vehicles,max_distant):
         elif x_min_ls[i] == 0 and y_min_ls[i] == 0:
             d_min_c = -1
     if len(d_min_1) == 0:
-        d_min_1_determine = [-300,-33]
+        d_min_1_determine = [-max_distances[0],-max_distances[1]]
     else:
         d_min_1_determine = [x_min_1[d_min_1.index(min(d_min_1))],y_min_1[d_min_1.index(min(d_min_1))]]
     if len(d_min_2) == 0:
-        d_min_2_determine = [-300,33]
+        d_min_2_determine = [-max_distances[0],max_distances[1]]
     else:
         d_min_2_determine = [x_min_2[d_min_2.index(min(d_min_2))],y_min_2[d_min_2.index(min(d_min_2))]]
     if len(d_min_3) == 0:
-        d_min_3_determine = [300,-33]
+        d_min_3_determine = [max_distances[0],-max_distances[1]]
     else:
         d_min_3_determine = [x_min_3[d_min_3.index(min(d_min_3))],y_min_3[d_min_3.index(min(d_min_3))]]
     if len(d_min_4) == 0:
-        d_min_4_determine = [300,33]
+        d_min_4_determine = [max_distances[0],max_distances[1]]
     else:
         d_min_4_determine = [x_min_4[d_min_4.index(min(d_min_4))],y_min_4[d_min_4.index(min(d_min_4))]]
     if len(d_min_5) == 0:
-        d_min_5_determine = [0,-33]
+        d_min_5_determine = [0,-max_distances[1]]
     else:
         d_min_5_determine = [x_min_5[d_min_5.index(min(d_min_5))],y_min_5[d_min_5.index(min(d_min_5))]]
     if len(d_min_6) == 0:
-        d_min_6_determine = [0,33]
+        d_min_6_determine = [0,max_distances[1]]
     else:
         d_min_6_determine = [x_min_6[d_min_6.index(min(d_min_6))],y_min_6[d_min_6.index(min(d_min_6))]]
     if len(d_min_7) == 0:
-        d_min_7_determine = [-300,0]
+        d_min_7_determine = [-max_distances[0],0]
     else:
         d_min_7_determine = [x_min_7[d_min_7.index(min(d_min_7))],y_min_7[d_min_7.index(min(d_min_7))]]
     if len(d_min_8) == 0:
-        d_min_8_determine = [300,0]
+        d_min_8_determine = [max_distances[0],0]
     else:
         d_min_8_determine = [x_min_8[d_min_8.index(min(d_min_8))],y_min_8[d_min_8.index(min(d_min_8))]]
     d_min_determine = d_min_1_determine+d_min_2_determine+d_min_3_determine+d_min_4_determine+d_min_5_determine+d_min_6_determine+d_min_7_determine+d_min_8_determine
     return d_min_determine,d_min_c
+
+
+def smooth(data, sm=100):
+    smooth_data = []
+    for d in data:
+        y = np.ones(sm) * 1 / sm
+        d = np.array(d).flatten()
+        d = np.convolve(y, d, "same")
+        smooth_data.append(d)
+    return smooth_data
 
     
 
@@ -345,13 +356,3 @@ if __name__ == "__main__":
     # plt.show()
     d_min = distant_min(polygon1, polygon2)
     print(d_min)
-
-
-def smooth(data, sm=100):
-    smooth_data = []
-    for d in data:
-        y = np.ones(sm) * 1 / sm
-        d = np.array(d).flatten()
-        d = np.convolve(y, d, "same")
-        smooth_data.append(d)
-    return smooth_data
