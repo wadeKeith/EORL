@@ -8,13 +8,13 @@ import scipy.io as sio
 have_model = 0
 render_flag = 0
 
-seed = 429
+seed = 8111
 
 
 actor_lr = 1e-5
 critic_lr = 1e-5
 num_episodes = 5000
-hidden_dim = 128
+hidden_dim = 256
 gamma = 0.9999
 lmbda = 0.95
 epochs = 100
