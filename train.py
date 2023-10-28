@@ -13,7 +13,7 @@ seed = 429
 
 actor_lr = 1e-5
 critic_lr = 1e-5
-num_episodes = 3000
+num_episodes = 5000
 hidden_dim = 128
 gamma = 0.9999
 lmbda = 0.95
