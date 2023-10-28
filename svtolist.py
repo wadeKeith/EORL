@@ -19,7 +19,6 @@ class SVtolist_env(object):
         self.surrounding_vehicle_width_max = max(self.surrounding_vehicle_all["v_Width"])
         # parameters f
         self.surrounding_vehicles = None
-        # self.max_distance = math.sqrt(300**2 + (1 * 23+10) ** 2)
 
 
 
