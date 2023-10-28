@@ -1,11 +1,11 @@
-.vscode
+*.vscode
 *.jpg
-.idea
+*.idea
 __pycache__/
 *.pth
 *.pkl
 *.csv
-.npy
-.mat
+*.npy
+*.mat
 model
-.DS_Store
+*.DS_Store
