@@ -4,6 +4,7 @@ from agent_env import AgentEnv
 from ppo import PolicyNetContinuous
 from vehicle_utils import  pb_cal
 import matplotlib.pyplot as plt
+import scipy.io as sio
 
 env = AgentEnv()
 
@@ -17,9 +18,9 @@ torch.cuda.manual_seed_all(seed)
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]  # 连续动作空间
 
-model_num = 99
+model_num = 71
 agent_test = PolicyNetContinuous(state_dim, hidden_dim, action_dim).to(device)
-agent_test.load_state_dict(torch.load("./model/ppo_continuous_%d.pkl" % model_num))
+agent_test.load_state_dict(torch.load("./ppo_continuous_%d.pkl" % model_num))
 agent_test.eval()
 
 
@@ -52,13 +53,13 @@ while not done:
             )[0]
     pb_ls.append(pb/1000)
     reward_ls.append(reward)
-    env.render()
+    # env.render()
     state = next_obs
     num += 1
-# plt.plot(np.linspace(1, len(pb_ls), len(pb_ls)), pb_ls)
-# plt.xlabel("time(0.1s)")
-# plt.ylabel("power(kW)")
-# plt.show()
+plt.plot(np.linspace(1, len(pb_ls), len(pb_ls)), pb_ls)
+plt.xlabel("time(0.1s)")
+plt.ylabel("power(kW)")
+plt.show()
 energy = 0
 for i in range(0, len(pb_ls)):
     energy = pb_ls[i] * 0.1 + energy
@@ -66,3 +67,5 @@ print("energy: ", energy/3600)
 print("reward: ", np.sum(reward_ls))
 print("num: ", num)
 print(info)
+np.save('EORL_pb.npy',pb_ls)
+sio.savemat('EORL_pb.mat',{'EORL_pb':pb_ls})
